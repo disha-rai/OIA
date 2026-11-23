@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sign in — OIA Hub</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='ui.css') }}">
+  <style>
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle at top, var(--navy), var(--deep-navy));
+      padding: 24px;
+    }
+    .login-card {
+      width: 100%;
+      max-width: 380px;
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 40px 36px;
+    }
+    .login-brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 28px;
+    }
+    .login-brand-logo {
+      width: 48px;
+      height: 48px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, var(--gold), var(--soft-gold));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      color: var(--deep-navy);
+      font-size: 15px;
+    }
+    .login-brand h1 { font-size: 17px; color: var(--navy); }
+    .login-brand p { font-size: 12px; color: var(--muted); }
+    .login-title { font-size: 22px; color: var(--navy); margin-bottom: 6px; }
+    .login-subtitle { font-size: 13px; color: var(--muted); margin-bottom: 26px; }
+    .login-field { margin-bottom: 18px; }
+    .login-field label { display: block; font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+    .login-field input {
+      width: 100%;
+      padding: 11px 14px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-size: 14px;
+      outline: none;
+    }
+    .login-field input:focus { border-color: var(--gold); }
+    .login-error {
+      background: #fef2f2;
+      color: var(--red);
+      border: 1px solid #fecaca;
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 13px;
+      margin-bottom: 18px;
+    }
+    .login-notice {
+      display: flex; gap: 10px; align-items: flex-start;
+      background: #fff8e6; color: #7a5a12; border: 1px solid #f3dc9f;
+      border-radius: 10px; padding: 10px 14px; font-size: 13px; line-height: 1.45; margin-bottom: 18px;
+    }
+    .login-submit {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 10px;
+      background: linear-gradient(135deg, var(--navy), var(--deep-navy));
+      color: #fff;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .login-submit:hover { opacity: 0.92; }
+    .pw-wrap { position: relative; }
+    .pw-wrap input { padding-right: 64px; }
+    .pw-toggle {
+      position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+      border: none; background: none; color: var(--muted); font-size: 12px; font-weight: 600;
+      cursor: pointer; padding: 6px 8px; border-radius: 8px;
+    }
+    .pw-toggle:hover { color: var(--navy); }
+    .login-remember { display: flex; align-items: center; gap: 8px; margin: -4px 0 18px; font-size: 13px; color: var(--text); cursor: pointer; }
+    .login-remember input { width: 16px; height: 16px; accent-color: var(--gold); cursor: pointer; }
+    .login-hint { margin-top: 18px; font-size: 12px; color: var(--muted); text-align: center; }
+  </style>
+  <link rel="stylesheet" href="{{ url_for('static', filename='oia-icons.css') }}?v=2">
+</head>
+<body>
+  <div class="login-card">
+    <div class="login-brand">
+      <div class="login-brand-logo">OIA</div>
+      <div><h1>Partner University Hub</h1><p>Office of International Affairs</p></div>
+    </div>
+    <h2 class="login-title">Sign in</h2>
+    <p class="login-subtitle">Use your OIA Hub account to view and manage data.</p>
+
+    {% if error %}<div class="login-error">{{ error }}</div>{% elif notice %}<div class="login-notice" role="status"><span aria-hidden="true">⏱</span><span>{{ notice }}</span></div>{% endif %}
+
+    <form method="POST" action="{{ url_for('login') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="next" value="{{ next_url }}">
+      <div class="login-field">
+        <label for="username">Username</label>
+        <input type="text" id="username" name="username" autocomplete="username" required autofocus>
+      </div>
+      <div class="login-field">
+        <label for="password">Password</label>
+        <div class="pw-wrap">
+          <input type="password" id="password" name="password" autocomplete="current-password" required>
+          <button type="button" class="pw-toggle" id="pwToggle" aria-label="Show password" aria-pressed="false">Show</button>
+        </div>
+      </div>
+      <label class="login-remember"><input type="checkbox" name="remember" value="1"> Remember me</label>
+      <button type="submit" class="login-submit">Sign in</button>
+    </form>
+    <p class="login-hint">Need access? Ask your OIA admin to create an account and grant you page permissions.</p>
+  </div>
+  <script>
+    (function () {
+      var btn = document.getElementById('pwToggle'), input = document.getElementById('password');
+      btn.addEventListener('click', function () {
+        var show = input.type === 'password';
+        input.type = show ? 'text' : 'password';
+        btn.textContent = show ? 'Hide' : 'Show';
+        btn.setAttribute('aria-pressed', show);
+        btn.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+      });
+    })();
+  </script>
+  <script src="{{ url_for('static', filename='oia-icons.js') }}?v=2"></script>
+</body>
+</html>

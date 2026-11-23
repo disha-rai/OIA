@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OIA Partner University Hub</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='ui.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='hub-shell.css') }}?v=4">
+  <link rel="stylesheet" href="{{ url_for('static', filename='oia-icons.css') }}?v=2">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-logo">OIA</div>
+        <div class="brand-text">
+          <h1>Partner University Hub</h1>
+          <p>Office of International Affairs</p>
+        </div>
+      </div>
+
+      <nav class="nav-menu nav-menu-links">
+        <a class="nav-item active" href="{{ url_for('index') }}"><span data-oia-icon="landmark" aria-hidden="true"></span> Universities</a>
+        <a class="nav-item" href="{{ url_for('masters_data') }}"><span data-oia-icon="graduation-cap" aria-hidden="true"></span> Masters Data</a>
+        <a class="nav-item" href="{{ url_for('student_exchange_page') }}"><span data-oia-icon="plane" aria-hidden="true"></span> Student Exchange</a>
+        <a class="nav-item" href="{{ url_for('internships_page') }}"><span data-oia-icon="briefcase-business" aria-hidden="true"></span> Internships</a>
+        <a class="nav-item" href="{{ url_for('reports_page') }}"><span data-oia-icon="chart-no-axes-combined" aria-hidden="true"></span> Reports</a>
+        {% if current_user.is_admin or ((current_user.controls or []) | reject('equalto','reports') | list) %}<a class="nav-item" href="{{ url_for('data_uploads_page') }}"><span data-oia-icon="upload" aria-hidden="true"></span> Data Uploads</a>{% else %}<span class="nav-item nav-item-disabled" title="You don't have permission to update data"><span data-oia-icon="upload" aria-hidden="true"></span> Data Uploads</span>{% endif %}
+        {% if current_user.is_admin %}<a class="nav-item" href="{{ url_for('admin_page') }}"><span data-oia-icon="settings" aria-hidden="true"></span> Admin</a>{% else %}<span class="nav-item nav-item-disabled"><span data-oia-icon="settings" aria-hidden="true"></span> Admin</span>{% endif %}
+      </nav>
+
+      <div class="sidebar-footer">
+        <strong>Internal Access Only</strong>
+        <p>Designed for OIA personnel with role-based access, centralized records, and university-wise relationship tracking.</p>
+      </div>
+    {% include "_user_card.html" %}
+</aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div class="page-title">
+          <h2><span class="oia-hero-mark" data-oia-icon="landmark" data-oia-animate="true" aria-hidden="true"></span>International Partner Universities</h2>
+          <p>Browse MoU partners, relationship activities, masters pathways, exchange records, and internships from one place.</p>
+        </div>
+        <div class="top-actions hub-actions">
+          <button type="button" class="hub-btn" id="exportCsvBtn" title="Download the universities currently shown as a spreadsheet (CSV)">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M4 21h16"/></svg>
+            Export CSV
+          </button>
+          {% if current_user.is_admin or ((current_user.controls or []) | reject('equalto','reports') | list) %}
+          <a class="hub-btn hub-btn-gold" href="{{ url_for('data_uploads_page') }}">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21V9M7 14l5-5 5 5M4 3h16"/></svg>
+            Update data
+          </a>
+          {% endif %}
+          {% include "_account_chip.html" %}
+        </div>
+      </header>
+
+
+      <!-- Stats are populated dynamically via /api/stats -->
+      <section class="stats-grid">
+        <article class="stat-card"><span>Total MoU Partners</span><h3 id="statTotal">—</h3></article>
+        <article class="stat-card"><span>Active MoUs</span><h3 id="statActive">—</h3></article>
+        <article class="stat-card"><span>Renewal Due</span><h3 id="statRenewal">—</h3></article>
+        <article class="stat-card"><span>Expired</span><h3 id="statExpired">—</h3></article>
+        <article class="stat-card"><span>Countries</span><h3 id="statCountries">—</h3></article>
+      </section>
+
+      <section class="toolbar">
+        <div class="toolbar-search-wrap">
+          <input id="searchInput" type="text" placeholder="Search university, country, MoU number..." />
+          <button id="clearFiltersBtn" class="clear-filters-btn" title="Clear all filters" style="display:none">
+            ✕ Clear Filters
+          </button>
+        </div>
+        <select id="countryFilter">
+          <option value="all">All Countries</option>
+        </select>
+        <select id="activityFilter">
+          <option value="all">All Activities</option>
+          <option value="Masters">Masters</option>
+          <option value="Exchange">Exchange</option>
+          <option value="Internship">Internship</option>
+          <option value="General MoU">General MoU</option>
+        </select>
+        <select id="statusFilter">
+          <option value="all">All Status</option>
+          <option value="Active">Active</option>
+          <option value="Renewal Due">Renewal Due</option>
+          <option value="Expired">Expired</option>
+        </select>
+        <select id="sortFilter">
+          <option value="name">Sort by University</option>
+          <option value="country">Sort by Country</option>
+          <option value="validity">Sort by Validity</option>
+        </select>
+      </section>
+
+      <div class="section-header">
+        <div>
+          <h3>MoU Partner Gallery</h3>
+          <p id="resultCount">Loading partner universities…</p>
+        </div>
+        <div class="view-toggle">
+          <button id="cardToggle" class="active">Card View</button>
+          <button id="tableToggle">Table View</button>
+        </div>
+      </div>
+
+      <section id="cardView" class="university-grid"></section>
+
+      <section id="tableView" class="table-view">
+        <table>
+          <thead>
+            <tr>
+              <th>University</th>
+              <th>Country</th>
+              <th>Program</th>
+              <th>Status</th>
+              <th>Valid Upto</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="universityTableBody"></tbody>
+        </table>
+      </section>
+
+      <div class="load-more-wrap">
+        <button id="loadMoreBtn" class="secondary-btn">Load More Universities</button>
+      </div>
+    </main>
+  </div>
+
+  <!-- Modal -->
+  <div id="modalOverlay" class="modal-overlay">
+    <div class="modal">
+      <button class="close-btn" onclick="closeModal()">×</button>
+      <div id="modalHero" class="modal-hero">
+        <div class="modal-title">
+          <div>
+            <h3 id="modalUniversityName">University Name</h3>
+            <p id="modalSubText">Country • Program • Status</p>
+          </div>
+          <a id="modalWebsiteBtn" class="primary-btn" href="#" target="_blank" rel="noopener noreferrer">Open Website</a>
+        </div>
+      </div>
+      <div class="modal-body">
+        <div class="modal-tabs">
+          <button class="tab-btn active" data-tab="overview">Overview</button>
+          <button class="tab-btn" data-tab="masters">Masters Data</button>
+          <button class="tab-btn" data-tab="relationship">Student Exchange</button>
+          <button class="tab-btn" data-tab="internships">Internships</button>
+          <button class="tab-btn" data-tab="contacts">Contacts</button>
+        </div>
+
+        <section id="overview" class="tab-panel active">
+          <div id="overviewGrid" class="details-grid"></div>
+        </section>
+
+        <section id="masters" class="tab-panel">
+          <h3>Masters Data</h3>
+          <div class="mini-table">
+            <table>
+              <thead><tr><th>Program</th><th>Opportunity</th><th>Duration</th><th>Discount</th><th>Ranking</th></tr></thead>
+              <tbody id="mastersTableBody"></tbody>
+            </table>
+          </div>
+          <p id="mastersNote" class="empty-state"></p>
+        </section>
+
+        <section id="relationship" class="tab-panel">
+          <h3>Student Exchange</h3>
+          <div id="relationshipGrid" class="module-grid"></div>
+        </section>
+
+        <section id="internships" class="tab-panel">
+          <h3>Internship Records</h3>
+          <div class="mini-table">
+            <table>
+              <thead><tr><th>Student</th><th>Course</th><th>Type</th><th>Status</th><th>Certificate</th></tr></thead>
+              <tbody id="internshipsTableBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="contacts" class="tab-panel">
+          <h3>Contact Details</h3>
+          <div id="contactGrid" class="details-grid"></div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='script.js') }}"></script>
+  <script src="{{ url_for('static', filename='oia-icons.js') }}?v=2"></script>
+</body>
+</html>

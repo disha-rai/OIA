@@ -1,0 +1,12 @@
+{# Compact signed-in account chip for page top bars. #}
+{% set _pages = (current_user.controls or []) | reject('equalto', 'reports') | list %}
+<div class="hub-account">
+  <div class="hub-avatar hub-avatar-sm" aria-hidden="true">{{ current_user.username[:2] | upper }}</div>
+  <div class="hub-account-meta">
+    <strong>{{ current_user.username }}</strong>
+    <span>{% if current_user.is_admin %}Admin · full access{% elif _pages %}Editor · {{ _pages | length }} page{{ 's' if _pages | length != 1 else '' }}{% else %}View only{% endif %}</span>
+  </div>
+  <a class="hub-account-out" href="{{ url_for('logout') }}" title="Sign out" aria-label="Sign out">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+  </a>
+</div>

@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Student Detail · Masters Data Hub — OIA</title>
+<style>
+  :root{
+    --navy-950:#0a0f1e;
+    --navy-900:#0d1326;
+    --navy-800:#131b32;
+    --navy-700:#1a2340;
+    --gold-500:#e3b23c;
+    --gold-400:#eec872;
+    --gold-100:#fbf1da;
+    --bg:#eef1f6;
+    --card:#ffffff;
+    --ink-900:#0f172a;
+    --ink-600:#4b5568;
+    --ink-400:#8b93a7;
+    --line:#e6e9f0;
+    --radius-lg:22px;
+    --radius-md:16px;
+    --radius-sm:10px;
+    font-family:"Inter","Segoe UI",system-ui,-apple-system,sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--ink-900);-webkit-font-smoothing:antialiased;}
+  a{text-decoration:none;color:inherit;}
+
+  .app{display:grid;grid-template-columns:280px 1fr;min-height:100vh;}
+
+  .sidebar{
+    background:linear-gradient(180deg,var(--navy-950),var(--navy-900) 60%,var(--navy-950));
+    padding:28px 20px;display:flex;flex-direction:column;gap:8px;color:#dfe4ef;
+  }
+  .brand{display:flex;align-items:center;gap:12px;padding:6px 8px 26px 8px;}
+  .brand-mark{
+    width:44px;height:44px;border-radius:12px;
+    background:linear-gradient(145deg,var(--gold-400),var(--gold-500));
+    display:flex;align-items:center;justify-content:center;
+    font-weight:800;color:var(--navy-950);font-size:14px;letter-spacing:.5px;
+    box-shadow:0 6px 16px rgba(227,178,60,.35);
+  }
+  .brand-text .title{font-weight:700;font-size:16.5px;color:#fff;line-height:1.2;}
+  .brand-text .sub{font-size:12px;color:#8a93ad;margin-top:2px;}
+  .nav-item{
+    display:flex;align-items:center;gap:12px;padding:13px 16px;border-radius:12px;
+    font-size:14.5px;font-weight:600;color:#c3cadd;cursor:pointer;
+    transition:background .15s ease, color .15s ease;
+  }
+  .nav-item .ic{font-size:16px;width:20px;text-align:center;}
+  .nav-item:hover{background:var(--navy-700);color:#fff;}
+  .nav-item.active{
+    background:linear-gradient(135deg,var(--gold-400),var(--gold-500));
+    color:var(--navy-950);box-shadow:0 8px 20px rgba(227,178,60,.25);
+  }
+  .side-note{margin-top:auto;background:var(--navy-800);border:1px solid #232c4a;border-radius:16px;padding:18px;}
+  .side-note .tag{color:var(--gold-400);font-weight:700;font-size:13px;margin-bottom:8px;}
+  .side-note p{font-size:12.5px;line-height:1.55;color:#9aa2b8;margin:0;}
+
+  .main{padding:26px 34px 60px;}
+
+  .breadcrumb{
+    display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--ink-400);margin-bottom:14px;
+  }
+  .breadcrumb a{color:var(--ink-600);}
+  .breadcrumb a:hover{color:var(--navy-950);text-decoration:underline;}
+
+  .hero{
+    position:relative;overflow:hidden;border-radius:var(--radius-lg);
+    background:linear-gradient(120deg,var(--navy-950) 0%, var(--navy-800) 55%, #3a2f12 130%);
+    padding:30px 34px;color:#fff;margin-bottom:22px;
+  }
+  .hero::before{
+    content:"";position:absolute;right:-80px;top:-80px;width:280px;height:280px;border-radius:50%;
+    background:radial-gradient(circle at 30% 30%, rgba(238,200,114,.30), transparent 70%);
+  }
+  .eyebrow{
+    display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.08);
+    border:1px solid rgba(255,255,255,.14);padding:7px 14px;border-radius:999px;
+    font-size:12px;font-weight:700;letter-spacing:.06em;color:var(--gold-400);position:relative;z-index:1;
+  }
+  .eyebrow .dot{width:7px;height:7px;border-radius:50%;background:var(--gold-500);}
+  .hero h1{font-size:30px;margin:14px 0 6px;font-weight:800;position:relative;z-index:1;}
+  .hero .meta{font-size:14px;color:#b7bed4;position:relative;z-index:1;}
+  .hero .status-chip{position:relative;z-index:1;display:inline-block;margin-top:12px;}
+
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;}
+  .panel{background:var(--card);border-radius:var(--radius-md);padding:22px;border:1px solid var(--line);}
+  .panel h3{margin:0 0 16px;font-size:16px;font-weight:800;}
+  .field-row{display:flex;justify-content:space-between;padding:11px 0;border-bottom:1px solid var(--line);font-size:13.5px;}
+  .field-row:last-child{border-bottom:none;}
+  .field-row .k{color:var(--ink-400);font-weight:600;}
+  .field-row .v{color:var(--ink-900);font-weight:700;text-align:right;max-width:60%;}
+
+  .status-chip{padding:5px 11px;border-radius:999px;font-size:11.5px;font-weight:700;}
+  .status-Completed,.status-Enrolled,.status-Reached,.status-CompletedandReturned{background:#e6f6ec;color:#1e8a4c;}
+  .status-Dropped,.status-Withdrawn{background:#fdeaea;color:#c0392b;}
+  .status-Applied,.status-YettoJoin,.status-Onrecord{background:var(--gold-100);color:#9a7418;}
+
+  /* ---------- GALLERY ---------- */
+  .gallery-panel{background:var(--card);border-radius:var(--radius-md);padding:22px;border:1px solid var(--line);}
+  .gallery-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px;}
+  .gallery-head h3{margin:0;font-size:16px;font-weight:800;}
+  .upload-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:18px;}
+  select, .file-btn{
+    padding:10px 14px;border-radius:10px;border:1px solid var(--line);font-size:13px;background:#fff;
+  }
+  .file-btn{
+    display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-weight:700;color:var(--navy-950);
+  }
+  .btn{
+    border:none;cursor:pointer;font-weight:700;font-size:13px;padding:10px 16px;border-radius:10px;
+    transition:transform .12s ease, filter .12s ease;
+  }
+  .btn:hover{transform:translateY(-1px);filter:brightness(1.03);}
+  .btn-gold{background:linear-gradient(135deg,var(--gold-400),var(--gold-500));color:var(--navy-950);}
+  .btn-gold:disabled{opacity:.5;cursor:not-allowed;transform:none;}
+
+  .doc-grid{
+    display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px;
+  }
+  .doc-card{
+    border:1px solid var(--line);border-radius:14px;overflow:hidden;background:#fafbfd;position:relative;
+  }
+  .doc-thumb{
+    width:100%;height:110px;background:#eef0f5;display:flex;align-items:center;justify-content:center;
+    font-size:28px;color:var(--ink-400);overflow:hidden;
+  }
+  .doc-thumb img{width:100%;height:100%;object-fit:cover;}
+  .doc-info{padding:10px 12px 12px;}
+  .doc-type{font-size:11px;font-weight:800;letter-spacing:.04em;color:#9a7418;text-transform:uppercase;}
+  .doc-name{font-size:11.5px;color:var(--ink-600);margin-top:3px;word-break:break-word;}
+  .doc-remove{
+    position:absolute;top:8px;right:8px;width:24px;height:24px;border-radius:50%;
+    background:rgba(10,15,30,.65);color:#fff;border:none;cursor:pointer;font-size:13px;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .doc-remove:hover{background:#c0392b;}
+  .empty-docs{padding:40px 20px;text-align:center;color:var(--ink-400);font-size:13.5px;grid-column:1/-1;}
+</style>
+<link rel="stylesheet" href="{{ url_for('static', filename='hub-shell.css') }}?v=4">
+  <link rel="stylesheet" href="{{ url_for('static', filename='oia-icons.css') }}?v=2">
+</head>
+<body>
+<div class="app">
+
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">OIA</div>
+      <div class="brand-text">
+        <div class="title">Masters Data Hub</div>
+        <div class="sub">Office of International Affairs</div>
+      </div>
+    </div>
+    <a class="nav-item" href="{{ url_for('index') }}"><span class="ic"><span data-oia-icon="landmark" aria-hidden="true"></span></span> Universities</a>
+    <a class="nav-item active" href="{{ url_for('masters_data') }}"><span class="ic"><span data-oia-icon="graduation-cap" aria-hidden="true"></span></span> Masters Data</a>
+    <a class="nav-item" href="{{ url_for('student_exchange_page') }}"><span class="ic"><span data-oia-icon="plane" aria-hidden="true"></span></span> Student Exchange</a>
+    <a class="nav-item" href="{{ url_for('internships_page') }}"><span class="ic"><span data-oia-icon="briefcase-business" aria-hidden="true"></span></span> Internships</a>
+    <a class="nav-item" href="{{ url_for('reports_page') }}"><span class="ic"><span data-oia-icon="chart-no-axes-combined" aria-hidden="true"></span></span> Reports</a>
+    {% if current_user.is_admin or ((current_user.controls or []) | reject('equalto','reports') | list) %}<a class="nav-item" href="{{ url_for('data_uploads_page') }}"><span class="ic"><span data-oia-icon="upload" aria-hidden="true"></span></span> Data Uploads</a>{% else %}<div class="nav-item nav-item-disabled" title="You don't have permission to update data"><span class="ic"><span data-oia-icon="upload" aria-hidden="true"></span></span> Data Uploads</div>{% endif %}
+    {% if current_user.is_admin %}<a class="nav-item" href="{{ url_for('admin_page') }}"><span class="ic"><span data-oia-icon="settings" aria-hidden="true"></span></span> Admin</a>{% else %}<div class="nav-item nav-item-disabled"><span class="ic"><span data-oia-icon="settings" aria-hidden="true"></span></span> Admin</div>{% endif %}
+    <div class="side-note">
+      <div class="tag">Data-management view</div>
+      <p>Built to organize program pathways, discounts, rankings, links, and PU-school mapping without overwhelming OIA staff.</p>
+    </div>
+    {% include "_user_card.html" %}
+</aside>
+
+  <main class="main">
+    <div class="breadcrumb">
+      <a href="#" id="backLink">← Back to students</a>
+      <span>/</span>
+      <span id="crumbName">Student</span>
+    </div>
+
+    <div class="hero">
+      <span class="eyebrow"><span class="dot"></span> STUDENT PROFILE</span>
+      <h1 id="studentName">Loading…</h1>
+      <div class="meta" id="studentMeta">&nbsp;</div>
+      <span class="status-chip" id="studentStatusChip"></span>
+    </div>
+
+    <div class="grid">
+      <div class="panel">
+        <h3>Program Details</h3>
+        <div id="programFields"></div>
+      </div>
+      <div class="panel">
+        <h3>Contact & Record</h3>
+        <div id="contactFields"></div>
+      </div>
+    </div>
+
+    <div class="gallery-panel">
+      <div class="gallery-head">
+        <h3>Document Gallery</h3>
+        <div class="upload-row">
+          <select id="docType">
+            <option>Passport</option>
+            <option>Visa</option>
+            <option>Offer Letter</option>
+            <option>Acceptance Letter</option>
+            <option>Photo</option>
+            <option>Certificate / Grade Card</option>
+            <option>Other</option>
+          </select>
+          <label class="file-btn btn btn-gold">
+            <span data-oia-icon="paperclip" aria-hidden="true"></span> Choose file
+            <input type="file" id="fileInput" accept=".png,.jpg,.jpeg,.gif,.webp,.pdf" style="display:none;">
+          </label>
+          <button class="btn btn-gold" id="uploadBtn" disabled>Upload</button>
+          <span id="fileLabel" style="font-size:12.5px;color:var(--ink-400);"></span>
+        </div>
+      </div>
+      <div class="doc-grid" id="docGrid">
+        <div class="empty-docs">Loading documents…</div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+  const studentId = {{ student_id | tojson }};
+  let pendingFile = null;
+
+  function esc(str){
+    return String(str ?? "").replace(/[&<>"']/g, (c) => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+    }[c]));
+  }
+
+  function statusClass(status){
+    return "status-" + String(status || "On record").replace(/[^a-zA-Z]/g, "");
+  }
+
+  function row(label, value){
+    if (!value) value = "Not recorded";
+    return `<div class="field-row"><span class="k">${esc(label)}</span><span class="v">${esc(value)}</span></div>`;
+  }
+
+  function renderStudent(student){
+    document.getElementById("studentName").textContent = student.name || "Unnamed student";
+    document.getElementById("crumbName").textContent = student.name || "Student";
+    document.getElementById("studentMeta").textContent =
+      [student.university, student.country].filter(Boolean).join(", ") || "Partner university not recorded";
+
+    const chip = document.getElementById("studentStatusChip");
+    chip.textContent = student.status || "On record";
+    chip.className = "status-chip " + statusClass(student.status);
+
+    document.getElementById("programFields").innerHTML = [
+      row("School", student.course),
+      row("Program", student.program),
+      row("Activity", student.activity),
+      row("Acceptance Letter", student.acceptance_letter),
+      row("Scholarship", student.scholarship),
+      row("Start Date", student.start_date),
+      row("End Date", student.end_date),
+    ].join("");
+
+    document.getElementById("contactFields").innerHTML = [
+      row("UID / Roll No.", student.uid),
+      row("Email", student.email),
+      row("Phone", student.phone),
+      row("Batch", student.batch),
+      row("Academic Year", student.year),
+      row("Partner University", student.university),
+      row("Country", student.country),
+    ].join("");
+  }
+
+  function renderDocs(docs){
+    const grid = document.getElementById("docGrid");
+    if (!docs.length){
+      grid.innerHTML = `<div class="empty-docs">No documents uploaded yet.</div>`;
+      return;
+    }
+    grid.innerHTML = docs.map((d) => {
+      const isImage = /\.(png|jpe?g|gif|webp)$/i.test(d.filename);
+      const thumb = isImage
+        ? `<img src="${d.url}" alt="${esc(d.doc_type)}">`
+        : `<span data-oia-icon="file-text" aria-hidden="true"></span>`;
+      return `
+        <div class="doc-card" data-filename="${esc(d.filename)}">
+          <button class="doc-remove" title="Remove">✕</button>
+          <a href="${d.url}" target="_blank" rel="noopener">
+            <div class="doc-thumb">${thumb}</div>
+          </a>
+          <div class="doc-info">
+            <div class="doc-type">${esc(d.doc_type)}</div>
+            <div class="doc-name">${esc(d.original_name)}</div>
+          </div>
+        </div>
+      `;
+    }).join("");
+
+    grid.querySelectorAll(".doc-remove").forEach((btn) => {
+      btn.addEventListener("click", async (e) => {
+        e.preventDefault();
+        const card = btn.closest(".doc-card");
+        const filename = card.getAttribute("data-filename");
+        const res = await fetch(`/api/students/${studentId}/documents/${encodeURIComponent(filename)}`, {
+          method: "DELETE",
+        });
+        const data = await res.json();
+        renderDocs(data.documents || []);
+      });
+    });
+  }
+
+  const fileInput = document.getElementById("fileInput");
+  const uploadBtn = document.getElementById("uploadBtn");
+  const fileLabel = document.getElementById("fileLabel");
+
+  fileInput.addEventListener("change", () => {
+    pendingFile = fileInput.files[0] || null;
+    fileLabel.textContent = pendingFile ? pendingFile.name : "";
+    uploadBtn.disabled = !pendingFile;
+  });
+
+  uploadBtn.addEventListener("click", async () => {
+    if (!pendingFile) return;
+    uploadBtn.disabled = true;
+    uploadBtn.textContent = "Uploading…";
+
+    const formData = new FormData();
+    formData.append("file", pendingFile);
+    formData.append("doc_type", document.getElementById("docType").value);
+
+    try {
+      const res = await fetch(`/api/students/${studentId}/documents`, {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      if (data.documents) renderDocs(data.documents);
+    } finally {
+      pendingFile = null;
+      fileInput.value = "";
+      fileLabel.textContent = "";
+      uploadBtn.disabled = true;
+      uploadBtn.textContent = "Upload";
+    }
+  });
+
+  const urlParams = new URLSearchParams(window.location.search);
+  const fromUniId = urlParams.get("from");
+  const fromHostId = urlParams.get("hostId");
+  const backLink = document.getElementById("backLink");
+  if (fromUniId === "exchange") {
+    backLink.href = "/student-exchange";
+  } else if (fromUniId === "internships" && fromHostId) {
+    backLink.href = `/internships/${encodeURIComponent(fromHostId)}`;
+    backLink.textContent = "← Back to internship";
+  } else if (fromUniId) {
+    backLink.href = `/students/${encodeURIComponent(fromUniId)}`;
+  } else {
+    backLink.addEventListener("click", (e) => {
+      e.preventDefault();
+      window.close();
+    });
+  }
+
+  async function load(){
+    try{
+      const res = await fetch(`/api/students/${studentId}`);
+      if (!res.ok){
+        document.getElementById("studentName").textContent = "Student not found";
+        document.getElementById("docGrid").innerHTML = "";
+        return;
+      }
+      const data = await res.json();
+      renderStudent(data.student);
+      renderDocs(data.documents || []);
+    } catch (err){
+      document.getElementById("studentName").textContent = "Couldn't load student";
+    }
+  }
+
+  load();
+</script>
+  <script src="{{ url_for('static', filename='oia-icons.js') }}?v=2"></script>
+</body>
+</html>

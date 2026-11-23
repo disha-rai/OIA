@@ -1,0 +1,47 @@
+{# Signed-in user card for the bottom of every sidebar. #}
+{% set _pages = (current_user.controls or []) | reject('equalto', 'reports') | list %}
+<div class="hub-user">
+  <div class="hub-user-row">
+    <div class="hub-avatar" aria-hidden="true">{{ current_user.username[:2] | upper }}</div>
+    <div class="hub-user-meta">
+      <strong title="{{ current_user.username }}">{{ current_user.username }}</strong>
+      {% if current_user.is_admin %}
+        <span class="hub-role hub-role-admin"><span data-oia-icon="star" aria-hidden="true"></span> Admin</span>
+      {% elif _pages %}
+        <span class="hub-role hub-role-editor">Editor</span>
+      {% else %}
+        <span class="hub-role hub-role-viewer">View only</span>
+      {% endif %}
+    </div>
+  </div>
+  <p class="hub-user-access">
+    {% if current_user.is_admin %}Full access to every page and user management.
+    {% elif _pages %}Can update: {% for c in _pages %}{{ PAGE_LABELS[c] }}{% if not loop.last %}, {% endif %}{% endfor %}.
+    {% else %}Can view every page; can't change data.{% endif %}
+  </p>
+  {% if session_ends_at %}
+  <p class="hub-session" data-ends="{{ session_ends_at }}" data-login="{{ url_for('login') }}">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+    <span>Signed in for {{ session_hours }} h</span>
+  </p>
+  <script>
+  (function () {
+    var el = document.currentScript.previousElementSibling;
+    var ends = Number(el.getAttribute("data-ends")) * 1000;
+    var t = new Date(ends);
+    var sameDay = t.toDateString() === new Date().toDateString();
+    el.querySelector("span").textContent = "Session ends " + (sameDay ? "at " : "tomorrow at ") +
+      t.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+    // When the sign-in runs out, go to the sign-in page instead of leaving a stale dashboard.
+    var wait = ends - Date.now();
+    if (wait < 2147483000) setTimeout(function () {
+      location.href = el.getAttribute("data-login") + "?expired=1&next=" + encodeURIComponent(location.pathname);
+    }, Math.max(0, wait) + 1000);
+  })();
+  </script>
+  {% endif %}
+  <a class="hub-signout" href="{{ url_for('logout') }}">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+    Sign out
+  </a>
+</div>

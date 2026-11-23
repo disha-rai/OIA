@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reports — OIA Hub</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='ui.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='reports.css') }}">
+  <script src="{{ url_for('static', filename='reports.js') }}" defer></script>
+<link rel="stylesheet" href="{{ url_for('static', filename='hub-shell.css') }}?v=4">
+  <link rel="stylesheet" href="{{ url_for('static', filename='oia-icons.css') }}?v=2">
+</head>
+<body>
+<div class="app-shell rp-shell">
+  <aside class="sidebar">
+    <div class="brand"><div class="brand-logo">OIA</div><div class="brand-text"><h1>Partner University Hub</h1><p>Office of International Affairs</p></div></div>
+    <nav class="nav-menu nav-menu-links">
+      <a class="nav-item" href="{{ url_for('index') }}"><span data-oia-icon="landmark" aria-hidden="true"></span> Universities</a>
+      <a class="nav-item" href="{{ url_for('masters_data') }}"><span data-oia-icon="graduation-cap" aria-hidden="true"></span> Masters Data</a>
+      <a class="nav-item" href="{{ url_for('student_exchange_page') }}"><span data-oia-icon="plane" aria-hidden="true"></span> Student Exchange</a>
+      <a class="nav-item" href="{{ url_for('internships_page') }}"><span data-oia-icon="briefcase-business" aria-hidden="true"></span> Internships</a>
+      <a class="nav-item active" href="{{ url_for('reports_page') }}"><span data-oia-icon="chart-no-axes-combined" aria-hidden="true"></span> Reports</a>
+      {% if current_user.is_admin or ((current_user.controls or []) | reject('equalto','reports') | list) %}<a class="nav-item" href="{{ url_for('data_uploads_page') }}"><span data-oia-icon="upload" aria-hidden="true"></span> Data Uploads</a>{% else %}<span class="nav-item nav-item-disabled" title="You don't have permission to update data"><span data-oia-icon="upload" aria-hidden="true"></span> Data Uploads</span>{% endif %}
+      {% if current_user.is_admin %}<a class="nav-item" href="{{ url_for('admin_page') }}"><span data-oia-icon="settings" aria-hidden="true"></span> Admin</a>{% else %}<span class="nav-item nav-item-disabled"><span data-oia-icon="settings" aria-hidden="true"></span> Admin</span>{% endif %}
+    </nav>
+    <div class="sidebar-footer"><strong>Data Quality Report</strong><p>A live audit of every dataset feeding the Hub: coverage, gaps and what to fix first.</p></div>
+    {% include "_user_card.html" %}
+  </aside>
+
+  <main class="main rp-main" id="reportRoot" data-state="loading" aria-busy="true">
+    <header class="topbar rp-topbar">
+      <div class="page-title">
+        <h2>Data Quality Report</h2>
+        <p class="rp-generated"><span class="rp-live-dot" aria-hidden="true"></span><span id="generatedAt">Analysing the loaded files…</span></p>
+      </div>
+      <div class="rp-actions">
+        <button type="button" id="refreshReport" class="rp-btn">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg>
+          <span>Refresh</span>
+        </button>
+        <button type="button" id="exportCsv" class="rp-btn" disabled>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 19.5h14"/></svg>
+          <span>Export CSV</span>
+        </button>
+        <button type="button" id="printReport" class="rp-btn rp-btn-primary">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 9V4h10v5M7 17H5a1.5 1.5 0 0 1-1.5-1.5v-5A1.5 1.5 0 0 1 5 9h14a1.5 1.5 0 0 1 1.5 1.5v5A1.5 1.5 0 0 1 19 17h-2M7 14h10v6H7z"/></svg>
+          <span>Print</span>
+        </button>
+      </div>
+    </header>
+
+    <div class="rp-error" id="reportError" role="alert" hidden>
+      <div>
+        <strong>The report couldn't be loaded</strong>
+        <span id="reportErrorText">Something went wrong while analysing the files.</span>
+      </div>
+      <button type="button" class="rp-btn" id="retryReport">Try again</button>
+    </div>
+
+    <nav class="rp-tabs" aria-label="Report sections">
+      <a href="#sec-overview" class="rp-tab is-active">Overview</a>
+      <a href="#sec-attention" class="rp-tab">Needs attention <span class="rp-tab-count" id="attentionCount"></span></a>
+      <a href="#sec-completeness" class="rp-tab">Field completeness</a>
+      <a href="#sec-students" class="rp-tab">Outbound students</a>
+      <a href="#sec-partners" class="rp-tab">Partner agreements</a>
+    </nav>
+
+    <!-- ── Overview ─────────────────────────────────────────────────────── -->
+    <section id="sec-overview" class="rp-section">
+      <div class="rp-hero">
+        <div class="rp-score">
+          <div class="rp-ring" id="scoreRing" style="--pct:0">
+            <div class="rp-ring-inner">
+              <strong id="qualityScore" class="rp-skel-text">00</strong>
+              <small>out of 100</small>
+            </div>
+          </div>
+          <div class="rp-score-text">
+            <span class="rp-eyebrow">Overall data quality</span>
+            <h3 id="scoreVerdict" class="rp-verdict"><span class="rp-skel-text">Checking…</span></h3>
+            <p id="qualitySummary" hidden></p>
+            <p class="rp-score-scale" aria-hidden="true">
+              <span><i class="rp-dot is-crit"></i>Below 70 poor</span>
+              <span><i class="rp-dot is-warn"></i>70–85 fair</span>
+              <span><i class="rp-dot is-good"></i>85+ good</span>
+            </p>
+          </div>
+        </div>
+        <div class="rp-hero-kpis">
+          <div class="rp-hero-kpi">
+            <span>Complete records</span>
+            <strong id="completeRecords" class="rp-skel-text">000</strong>
+            <div class="rp-mini-meter"><i id="completeMeter" style="width:0"></i></div>
+            <small id="completeSub">&nbsp;</small>
+          </div>
+          <div class="rp-hero-kpi">
+            <span>Incomplete records</span>
+            <strong id="incompleteRecords" class="rp-skel-text">000</strong>
+            <small id="incompleteSub">&nbsp;</small>
+          </div>
+          <div class="rp-hero-kpi">
+            <span>Invalid emails</span>
+            <strong id="invalidEmails" class="rp-skel-text">0</strong>
+            <small>Present but not a valid address</small>
+          </div>
+          <div class="rp-hero-kpi">
+            <span>Usable core cells</span>
+            <strong id="usableCells" class="rp-skel-text">0,000</strong>
+            <small id="usableCellsSub">&nbsp;</small>
+          </div>
+        </div>
+      </div>
+
+      <div class="rp-section-head">
+        <div><h2>Datasets at a glance</h2><p>Record counts in each source currently loaded into the Hub.</p></div>
+      </div>
+      <div class="rp-tiles" id="overviewTiles">
+        <article class="rp-tile"><span class="rp-tile-icon" aria-hidden="true"><span data-oia-icon="landmark" aria-hidden="true"></span></span><div><span>MoU partners</span><strong id="ovUnis" class="rp-skel-text">000</strong><small>Partner institutions</small></div></article>
+        <article class="rp-tile"><span class="rp-tile-icon" aria-hidden="true"><span data-oia-icon="plane-takeoff" aria-hidden="true"></span></span><div><span>Outbound students</span><strong id="ovOutbound" class="rp-skel-text">000</strong><small>Students going abroad</small></div></article>
+        <article class="rp-tile"><span class="rp-tile-icon" aria-hidden="true"><span data-oia-icon="plane-landing" aria-hidden="true"></span></span><div><span>Incoming students</span><strong id="ovIncoming" class="rp-skel-text">00</strong><small>Students coming to PU</small></div></article>
+        <article class="rp-tile"><span class="rp-tile-icon" aria-hidden="true"><span data-oia-icon="plane" aria-hidden="true"></span></span><div><span>Semester exchange</span><strong id="ovExchange" class="rp-skel-text">000</strong><small id="ovExchangeSub">Outbound exchange records</small></div></article>
+        <article class="rp-tile"><span class="rp-tile-icon" aria-hidden="true"><span data-oia-icon="briefcase-business" aria-hidden="true"></span></span><div><span>Internship students</span><strong id="ovInternship" class="rp-skel-text">000</strong><small id="ovInternshipSub">Internship-type activities</small></div></article>
+        <article class="rp-tile"><span class="rp-tile-icon" aria-hidden="true"><span data-oia-icon="graduation-cap" aria-hidden="true"></span></span><div><span>Masters universities</span><strong id="ovMasters" class="rp-skel-text">00</strong><small id="ovMastersSub">Universities in masters data</small></div></article>
+      </div>
+    </section>
+
+    <!-- ── Needs attention ──────────────────────────────────────────────── -->
+    <section id="sec-attention" class="rp-section">
+      <div class="rp-section-head">
+        <div><h2>Needs attention</h2><p>Issues found automatically in the loaded data, most serious first.</p></div>
+      </div>
+      <div class="rp-insights" id="insightList">
+        <div class="rp-insight rp-skel-block"></div>
+        <div class="rp-insight rp-skel-block"></div>
+        <div class="rp-insight rp-skel-block"></div>
+      </div>
+      <button type="button" class="rp-link-btn" id="insightMore" hidden></button>
+    </section>
+
+    <!-- ── Field completeness ───────────────────────────────────────────── -->
+    <section id="sec-completeness" class="rp-section">
+      <div class="rp-section-head">
+        <div><h2>Field completeness</h2><p>Share of outbound student records with a usable value in each core field, weakest first. The line marks the 90% target.</p></div>
+      </div>
+      <article class="rp-card" data-card="completeness">
+        <div class="rp-card-head">
+          <div class="rp-legend" aria-label="Legend">
+            <span><i class="rp-swatch is-good"></i>On target (90%+)</span>
+            <span><i class="rp-swatch is-warn"></i>Close (75–90%)</span>
+            <span><i class="rp-swatch is-crit"></i>Needs work (below 75%)</span>
+          </div>
+          <button type="button" class="rp-view-toggle" data-view-toggle aria-pressed="false">Table view</button>
+        </div>
+        <div class="rp-chart" id="chartCompleteness"><div class="rp-skel-chart"></div></div>
+      </article>
+    </section>
+
+    <!-- ── Outbound students ────────────────────────────────────────────── -->
+    <section id="sec-students" class="rp-section">
+      <div class="rp-section-head">
+        <div><h2>Outbound students</h2><p>How the outbound roster breaks down. Grey bars are records where the value wasn't filled in.</p></div>
+      </div>
+      <div class="rp-grid">
+        <article class="rp-card" data-card="activity">
+          <div class="rp-card-head"><div><h3>Engagement type</h3><p>Students by activity</p></div><button type="button" class="rp-view-toggle" data-view-toggle aria-pressed="false">Table view</button></div>
+          <div class="rp-chart" id="chartActivity"><div class="rp-skel-chart"></div></div>
+        </article>
+        <article class="rp-card" data-card="status">
+          <div class="rp-card-head"><div><h3>Current status</h3><p>Status values in the roster</p></div><button type="button" class="rp-view-toggle" data-view-toggle aria-pressed="false">Table view</button></div>
+          <div class="rp-chart" id="chartStatus"><div class="rp-skel-chart"></div></div>
+        </article>
+        <article class="rp-card" data-card="countries">
+          <div class="rp-card-head"><div><h3>Destination countries</h3><p>Top countries students travel to</p></div><button type="button" class="rp-view-toggle" data-view-toggle aria-pressed="false">Table view</button></div>
+          <div class="rp-chart" id="chartCountries"><div class="rp-skel-chart"></div></div>
+        </article>
+        <article class="rp-card" data-card="batches">
+          <div class="rp-card-head"><div><h3>Batches</h3><p>Records per source batch</p></div><button type="button" class="rp-view-toggle" data-view-toggle aria-pressed="false">Table view</button></div>
+          <div class="rp-chart" id="chartBatches"><div class="rp-skel-chart"></div></div>
+        </article>
+        <article class="rp-card rp-span-2" data-card="courses">
+          <div class="rp-card-head"><div><h3>Courses</h3><p>Top programmes recorded for outbound students</p></div><button type="button" class="rp-view-toggle" data-view-toggle aria-pressed="false">Table view</button></div>
+          <div class="rp-chart rp-chart-wide-labels" id="chartCourses"><div class="rp-skel-chart"></div></div>
+        </article>
+      </div>
+    </section>
+
+    <!-- ── Partner agreements ───────────────────────────────────────────── -->
+    <section id="sec-partners" class="rp-section">
+      <div class="rp-section-head">
+        <div><h2>Partner agreements</h2><p>MoU status and where partner universities are located.</p></div>
+      </div>
+      <div class="rp-grid">
+        <article class="rp-card" data-card="mou_status">
+          <div class="rp-card-head"><div><h3>MoU health</h3><p id="mouHealthSub">Agreement status across all partners</p></div><button type="button" class="rp-view-toggle" data-view-toggle aria-pressed="false">Table view</button></div>
+          <div class="rp-chart" id="chartMouStatus"><div class="rp-skel-chart"></div></div>
+        </article>
+        <article class="rp-card" data-card="mou_countries">
+          <div class="rp-card-head"><div><h3>Partners by country</h3><p>Top countries for partner universities</p></div><button type="button" class="rp-view-toggle" data-view-toggle aria-pressed="false">Table view</button></div>
+          <div class="rp-chart" id="chartMouCountries"><div class="rp-skel-chart"></div></div>
+        </article>
+      </div>
+    </section>
+
+    <p class="rp-footnote">Figures are calculated live from the Excel files currently loaded into the Hub. “Usable” means the field is filled in and, for email, is a valid address.</p>
+  </main>
+</div>
+<div class="rp-tooltip" id="rpTooltip" role="tooltip" hidden></div>
+  <script src="{{ url_for('static', filename='oia-icons.js') }}?v=2"></script>
+</body>
+</html>

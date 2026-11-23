@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin — OIA Hub</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='ui.css') }}">
+  <style>
+    /* ── Admin page ────────────────────────────────────────────────────────
+       Built on the shared tokens in ui.css (navy / gold / 22px cards) so the
+       Admin screen reads as part of the Hub rather than a bolted-on form. */
+
+    .admin-main { padding: 26px 32px 48px; }
+
+    /* The sidebar is 100vh and sticky, so on a long page the column beneath it
+       would otherwise show through as plain background. */
+    .app-shell { background: linear-gradient(90deg, var(--deep-navy) 0 280px, var(--bg) 280px); }
+
+    /* Alerts ------------------------------------------------------------- */
+    .alert {
+      display: flex;
+      align-items: flex-start;
+      gap: 13px;
+      border-radius: 18px;
+      padding: 15px 18px;
+      margin-bottom: 18px;
+      font-size: 13.5px;
+      line-height: 1.55;
+      border: 1px solid transparent;
+      box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
+    }
+    .alert-icon {
+      flex: none;
+      width: 30px;
+      height: 30px;
+      border-radius: 10px;
+      display: grid;
+      place-items: center;
+    }
+    .alert-icon svg { width: 17px; height: 17px; }
+    .alert strong { display: block; margin-bottom: 2px; font-size: 13.5px; }
+    .alert-danger { background: #fef2f2; border-color: #fecaca; color: #991b1b; }
+    .alert-danger .alert-icon { background: #fee2e2; color: var(--red); }
+    .alert-warn { background: #fffbeb; border-color: #fde68a; color: #92400e; }
+    .alert-warn .alert-icon { background: #fef3c7; color: #b45309; }
+    .alert code {
+      background: rgba(146, 64, 14, 0.12);
+      padding: 1px 6px;
+      border-radius: 6px;
+      font-size: 12.5px;
+    }
+
+    /* Stat strip --------------------------------------------------------- */
+    .admin-stats {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(160px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .admin-stat {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 18px;
+      box-shadow: 0 12px 28px rgba(15, 23, 42, 0.06);
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .admin-stat:hover { transform: translateY(-2px); box-shadow: 0 18px 34px rgba(15, 23, 42, 0.1); }
+    .admin-stat-icon {
+      width: 44px;
+      height: 44px;
+      flex: none;
+      border-radius: 14px;
+      display: grid;
+      place-items: center;
+      background: var(--blue-soft);
+      color: var(--navy);
+    }
+    .admin-stat-icon svg { width: 21px; height: 21px; }
+    .admin-stat-icon.gold { background: rgba(212, 175, 55, 0.16); color: #8a6d00; }
+    .admin-stat-icon.green { background: #dcfce7; color: #15803d; }
+    .admin-stat-icon.slate { background: #f1f5f9; color: var(--muted); }
+    .admin-stat span { color: var(--muted); font-size: 12.5px; display: block; }
+    .admin-stat h3 { color: var(--deep-navy); font-size: 26px; line-height: 1.1; margin-top: 2px; }
+
+    /* Cards -------------------------------------------------------------- */
+    .admin-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: 0 16px 34px rgba(15, 23, 42, 0.06);
+      margin-bottom: 24px;
+      overflow: hidden;
+    }
+    .admin-card-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      flex-wrap: wrap;
+      padding: 22px 26px;
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(180deg, #fbfcff, var(--white));
+    }
+    .admin-card-head h3 {
+      font-size: 17px;
+      color: var(--deep-navy);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .admin-card-head h3 svg { width: 18px; height: 18px; color: var(--gold); flex: none; }
+    .admin-card-head p { color: var(--muted); font-size: 12.5px; margin-top: 5px; max-width: 62ch; }
+    .admin-card-body { padding: 22px 26px 26px; }
+
+    .count-pill {
+      display: inline-block;
+      margin-left: 8px;
+      padding: 2px 10px;
+      border-radius: 999px;
+      background: var(--blue-soft);
+      color: #2748a3;
+      font-size: 12px;
+      font-weight: 700;
+      vertical-align: middle;
+    }
+
+    /* Search ------------------------------------------------------------- */
+    .search-wrap { position: relative; }
+    .search-wrap svg {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 16px;
+      height: 16px;
+      color: var(--muted);
+      pointer-events: none;
+    }
+    .search-wrap input {
+      width: 260px;
+      max-width: 100%;
+      padding: 11px 14px 11px 38px;
+      border: 1px solid var(--border);
+      border-radius: 13px;
+      background: #fbfdff;
+      font-size: 13.5px;
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.18s, box-shadow 0.18s;
+    }
+    .search-wrap input:focus { border-color: var(--gold); box-shadow: 0 0 0 4px rgba(212, 175, 55, 0.12); }
+
+    /* Users table -------------------------------------------------------- */
+    .table-scroll { overflow-x: auto; }
+    table.user-table { width: 100%; border-collapse: collapse; min-width: 960px; }
+    table.user-table th {
+      text-align: left;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      font-weight: 700;
+      padding: 0 14px 12px;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    table.user-table td {
+      padding: 16px 14px;
+      border-bottom: 1px solid #eef2f7;
+      vertical-align: middle;
+      font-size: 13.5px;
+    }
+    table.user-table th:nth-child(2), table.user-table td:nth-child(2) { min-width: 132px; }
+    table.user-table th:last-child, table.user-table td:last-child { width: 1%; }
+    table.user-table tbody tr { transition: background 0.16s ease; }
+    /* Rows the search hides: beats the display rules set further down. */
+    table.user-table tbody tr[hidden] { display: none; }
+    table.user-table tbody tr:hover { background: #fbfcff; }
+    table.user-table tbody tr:last-child td { border-bottom: none; }
+    table.user-table tr.is-dirty { background: #fffdf5; }
+    table.user-table tr.is-dirty:hover { background: #fffaeb; }
+
+    .user-cell { display: flex; align-items: center; gap: 12px; }
+    .user-avatar {
+      width: 38px;
+      height: 38px;
+      flex: none;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--navy), var(--deep-navy));
+      color: var(--soft-gold);
+      display: grid;
+      place-items: center;
+      font-weight: 800;
+      font-size: 13px;
+      letter-spacing: 0.5px;
+    }
+    .user-avatar.is-admin { background: linear-gradient(135deg, var(--gold), var(--soft-gold)); color: var(--deep-navy); }
+    .user-name { font-weight: 700; color: var(--deep-navy); word-break: break-word; }
+    .user-sub { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+    .you-chip {
+      display: inline-block;
+      margin-left: 6px;
+      padding: 1px 7px;
+      border-radius: 999px;
+      background: var(--blue-soft);
+      color: #2748a3;
+      font-size: 10.5px;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      vertical-align: middle;
+    }
+
+    /* Admin switch ------------------------------------------------------- */
+    .switch { display: inline-flex; align-items: center; gap: 9px; cursor: pointer; user-select: none; }
+    .switch input { position: absolute; opacity: 0; width: 0; height: 0; }
+    .switch-track {
+      width: 40px;
+      height: 23px;
+      border-radius: 999px;
+      background: #cbd5e1;
+      position: relative;
+      transition: background 0.2s ease;
+      flex: none;
+    }
+    .switch-thumb {
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 17px;
+      height: 17px;
+      border-radius: 50%;
+      background: var(--white);
+      box-shadow: 0 2px 5px rgba(15, 23, 42, 0.25);
+      transition: transform 0.2s ease;
+    }
+    .switch input:checked + .switch-track { background: var(--gold); }
+    .switch input:checked + .switch-track .switch-thumb { transform: translateX(17px); }
+    .switch input:focus-visible + .switch-track { box-shadow: 0 0 0 4px rgba(212, 175, 55, 0.25); }
+    .switch-text { font-size: 12.5px; font-weight: 600; color: var(--muted); white-space: nowrap; }
+    .switch input:checked ~ .switch-text { color: #8a6d00; }
+    .switch.is-locked { cursor: not-allowed; }
+    .switch.is-locked .switch-track { opacity: 0.75; }
+    .lock-hint { display: block; font-size: 10.5px; color: var(--muted); margin-top: 5px; white-space: nowrap; }
+
+    /* Page-access chips -------------------------------------------------- */
+    .chip-grid { display: flex; flex-wrap: wrap; gap: 7px; max-width: 460px; transition: opacity 0.2s ease; }
+    .chip { cursor: pointer; }
+    .chip input { position: absolute; opacity: 0; width: 0; height: 0; }
+    .chip-body {
+      display: inline-block;
+      padding: 6px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: #f8fafc;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 600;
+      white-space: nowrap;
+      transition: 0.18s ease;
+    }
+    .chip:hover .chip-body { border-color: #cbd5e1; color: var(--text); }
+    .chip input:checked + .chip-body {
+      background: rgba(212, 175, 55, 0.14);
+      border-color: var(--gold);
+      color: #7a5f00;
+    }
+    .chip input:focus-visible + .chip-body { box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.22); }
+    .chip-grid.is-superseded { opacity: 0.42; }
+    .chip-note { display: none; font-size: 11px; color: var(--muted); margin-top: 7px; max-width: 46ch; }
+    .chip-grid.is-superseded + .chip-note { display: block; }
+
+    /* Password field ----------------------------------------------------- */
+    .pw-field { position: relative; width: 168px; max-width: 100%; }
+    .pw-field input {
+      width: 100%;
+      padding: 9px 50px 9px 12px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-size: 12.5px;
+      background: #fbfdff;
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.18s, box-shadow 0.18s;
+    }
+    .pw-field input:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.12); }
+    .pw-toggle {
+      position: absolute;
+      right: 5px;
+      top: 50%;
+      transform: translateY(-50%);
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      padding: 5px 7px;
+      border-radius: 7px;
+    }
+    .pw-toggle:hover { background: var(--blue-soft); color: var(--navy); }
+
+    /* Buttons ------------------------------------------------------------ */
+    .row-actions { display: flex; gap: 8px; align-items: center; flex-wrap: nowrap; justify-content: flex-end; }
+    .admin-btn {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 9px 16px;
+      font-size: 12.5px;
+      font-weight: 700;
+      cursor: pointer;
+      background: var(--white);
+      color: var(--navy);
+      transition: 0.18s ease;
+      white-space: nowrap;
+    }
+    .admin-btn:hover { transform: translateY(-1px); box-shadow: 0 10px 20px rgba(15, 23, 42, 0.1); }
+    .admin-btn.is-active {
+      background: var(--gold);
+      border-color: var(--gold);
+      color: var(--deep-navy);
+      box-shadow: 0 8px 18px rgba(212, 175, 55, 0.3);
+    }
+    .admin-btn.primary { background: var(--navy); border-color: var(--navy); color: var(--white); }
+    .admin-btn.danger { background: var(--white); border-color: #fecaca; color: var(--red); }
+    .admin-btn.danger:hover { background: #fef2f2; }
+    .unsaved-dot {
+      display: none;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--orange);
+      box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.18);
+    }
+    tr.is-dirty .unsaved-dot { display: inline-block; }
+
+    .empty-row td { text-align: center; color: var(--muted); padding: 34px 14px; font-size: 13px; }
+
+    /* Create-user form --------------------------------------------------- */
+    .create-form { display: grid; grid-template-columns: repeat(2, minmax(220px, 1fr)); gap: 18px; }
+    .create-form .field { display: flex; flex-direction: column; gap: 7px; }
+    .create-form .full { grid-column: 1 / -1; }
+    .create-form .field-label { font-size: 12.5px; font-weight: 700; color: var(--text); }
+    .create-form input[type="text"],
+    .create-form input[type="password"] {
+      padding: 11px 13px;
+      border: 1px solid var(--border);
+      border-radius: 11px;
+      font-size: 13.5px;
+      background: #fbfdff;
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.18s, box-shadow 0.18s;
+    }
+    .create-form input[type="text"]:focus,
+    .create-form input[type="password"]:focus { border-color: var(--gold); box-shadow: 0 0 0 4px rgba(212, 175, 55, 0.12); }
+    .field-hint { font-size: 11.5px; color: var(--muted); }
+    .create-form .pw-field { width: 100%; }
+    .create-form .pw-field input { padding: 11px 52px 11px 13px; font-size: 13.5px; border-radius: 11px; }
+    .admin-opt {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 15px 17px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: #fbfcff;
+    }
+    .admin-opt-text strong { display: block; font-size: 13px; color: var(--deep-navy); }
+    .admin-opt-text p { font-size: 11.5px; color: var(--muted); margin-top: 3px; }
+    .form-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      flex-wrap: wrap;
+      border-top: 1px solid var(--border);
+      padding-top: 18px;
+    }
+
+    /* Security card ------------------------------------------------------ */
+    .policy-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; }
+    .policy {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px 16px;
+      background: #fbfcff;
+    }
+    .policy span { display: block; font-size: 11.5px; color: var(--muted); }
+    .policy strong { display: block; font-size: 15px; color: var(--deep-navy); margin-top: 4px; }
+    .policy small { display: block; font-size: 11px; color: var(--muted); margin-top: 4px; line-height: 1.45; }
+    .policy-note { font-size: 12px; color: var(--muted); margin-top: 16px; line-height: 1.6; }
+    .policy-note code { background: #f1f5f9; padding: 2px 7px; border-radius: 6px; font-size: 11.5px; color: var(--navy); }
+
+    /* Responsive --------------------------------------------------------- */
+    @media (max-width: 1150px) {
+      .admin-stats { grid-template-columns: repeat(2, minmax(150px, 1fr)); }
+      .table-scroll { overflow-x: visible; }
+      table.user-table { min-width: 0; }
+      table.user-table thead { display: none; }
+      table.user-table tbody tr {
+        display: block;
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 6px 4px;
+        margin-bottom: 14px;
+        background: var(--white);
+      }
+      table.user-table tbody tr[hidden] { display: none; }
+      table.user-table td { display: block; border-bottom: none; padding: 10px 14px; }
+      table.user-table td[data-label]::before {
+        content: attr(data-label);
+        display: block;
+        font-size: 10.5px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--muted);
+        font-weight: 700;
+        margin-bottom: 7px;
+      }
+      .row-actions { justify-content: flex-start; flex-wrap: wrap; }
+      .pw-field { width: 100%; max-width: 280px; }
+      .chip-grid { max-width: none; }
+    }
+    @media (max-width: 900px) {
+      .app-shell { grid-template-columns: 1fr; background: var(--bg); }
+      .sidebar { position: static; height: auto; }
+      .admin-main { padding: 20px 18px 40px; }
+      .create-form { grid-template-columns: 1fr; }
+      .admin-card-head, .admin-card-body { padding-left: 18px; padding-right: 18px; }
+    }
+    @media (max-width: 560px) {
+      .admin-stats { grid-template-columns: 1fr; }
+      .search-wrap input { width: 100%; }
+    }
+  </style>
+<link rel="stylesheet" href="{{ url_for('static', filename='hub-shell.css') }}?v=4">
+  <link rel="stylesheet" href="{{ url_for('static', filename='oia-icons.css') }}?v=2">
+</head>
+<body>
+{% set admin_count = users | selectattr('is_admin') | list | length %}
+{% set controller_count = users | rejectattr('is_admin') | selectattr('controls') | list | length %}
+<div class="app-shell">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-logo">OIA</div>
+      <div class="brand-text"><h1>Partner University Hub</h1><p>Office of International Affairs</p></div>
+    </div>
+    <nav class="nav-menu nav-menu-links">
+      <a class="nav-item" href="{{ url_for('index') }}"><span data-oia-icon="landmark" aria-hidden="true"></span> Universities</a>
+      <a class="nav-item" href="{{ url_for('masters_data') }}"><span data-oia-icon="graduation-cap" aria-hidden="true"></span> Masters Data</a>
+      <a class="nav-item" href="{{ url_for('student_exchange_page') }}"><span data-oia-icon="plane" aria-hidden="true"></span> Student Exchange</a>
+      <a class="nav-item" href="{{ url_for('internships_page') }}"><span data-oia-icon="briefcase-business" aria-hidden="true"></span> Internships</a>
+      <a class="nav-item" href="{{ url_for('reports_page') }}"><span data-oia-icon="chart-no-axes-combined" aria-hidden="true"></span> Reports</a>
+      {% if current_user.is_admin or ((current_user.controls or []) | reject('equalto','reports') | list) %}<a class="nav-item" href="{{ url_for('data_uploads_page') }}"><span data-oia-icon="upload" aria-hidden="true"></span> Data Uploads</a>{% else %}<span class="nav-item nav-item-disabled" title="You don't have permission to update data"><span data-oia-icon="upload" aria-hidden="true"></span> Data Uploads</span>{% endif %}
+      <a class="nav-item active" href="{{ url_for('admin_page') }}"><span data-oia-icon="settings" aria-hidden="true"></span> Admin</a>
+    </nav>
+    {% include "_user_card.html" %}
+  </aside>
+
+  <main class="main admin-main">
+    <header class="topbar">
+      <div class="page-title">
+        <h2>Users &amp; Access</h2>
+        <p>Everyone signed in can view every page. Only a page's controllers, or an admin, can change that page's data.</p>
+      </div>
+      <div class="top-actions hub-actions">
+        <a class="hub-btn" href="{{ url_for('data_uploads_page') }}">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21V9M7 14l5-5 5 5M4 3h16"/></svg>
+          Upload access
+        </a>
+        {% include "_account_chip.html" %}
+      </div>
+    </header>
+
+    {% if error %}
+    <div class="alert alert-danger" role="alert">
+      <span class="alert-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5M12 16.5h.01"/></svg>
+      </span>
+      <div><strong>That didn't go through</strong>{{ error }}</div>
+    </div>
+    {% endif %}
+
+    {% if default_password_in_use %}
+    <div class="alert alert-warn" role="alert">
+      <span class="alert-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 2.8 19.5h18.4z"/><path d="M12 10v4M12 17.2h.01"/></svg>
+      </span>
+      <div>
+        <strong>The built-in admin account is still using its default password</strong>
+        Anyone who knows the default can sign in as <code>admin</code>. Set a new one on the <em>admin</em> row below — type it into <em>New password</em>, then press Save.
+      </div>
+    </div>
+    {% endif %}
+
+    <section class="admin-stats">
+      <article class="admin-stat">
+        <span class="admin-stat-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 20v-1.6a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4V20"/><circle cx="9" cy="7.2" r="3.4"/><path d="M22 20v-1.6a4 4 0 0 0-3-3.87"/><path d="M16.5 4a3.4 3.4 0 0 1 0 6.4"/></svg>
+        </span>
+        <div><span>Total users</span><h3>{{ users | length }}</h3></div>
+      </article>
+      <article class="admin-stat">
+        <span class="admin-stat-icon gold" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.8 4 6.2v5.1c0 4.7 3.4 9 8 10 4.6-1 8-5.3 8-10V6.2z"/><path d="m9 12 2.2 2.2L15.4 10"/></svg>
+        </span>
+        <div><span>Admins</span><h3>{{ admin_count }}</h3></div>
+      </article>
+      <article class="admin-stat">
+        <span class="admin-stat-icon green" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13.3 10.7a4.6 4.6 0 0 1 0 6.5l-2 2a4.6 4.6 0 0 1-6.5-6.5l1-1"/><path d="M10.7 13.3a4.6 4.6 0 0 1 0-6.5l2-2a4.6 4.6 0 0 1 6.5 6.5l-1 1"/></svg>
+        </span>
+        <div><span>Page controllers</span><h3>{{ controller_count }}</h3></div>
+      </article>
+      <article class="admin-stat">
+        <span class="admin-stat-icon slate" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.2 12S5.8 5.5 12 5.5 21.8 12 21.8 12 18.2 18.5 12 18.5 2.2 12 2.2 12Z"/><circle cx="12" cy="12" r="2.8"/></svg>
+        </span>
+        <div><span>View-only</span><h3>{{ users | length - admin_count - controller_count }}</h3></div>
+      </article>
+    </section>
+
+    <section class="admin-card">
+      <div class="admin-card-head">
+        <div>
+          <h3>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 20v-1.6a4 4 0 0 0-4-4H6.5a4 4 0 0 0-4 4V20"/><circle cx="9.75" cy="7.2" r="3.4"/><path d="M19.5 10.5h2M20.5 9.5v2"/></svg>
+            Users<span class="count-pill">{{ users | length }}</span>
+          </h3>
+          <p>Switch someone to admin, or tick the pages they may upload data and documents for, then press Save on that row. You can also manage this per page on <a href="{{ url_for('data_uploads_page') }}" style="font-weight:700;text-decoration:underline;">Data Uploads</a>. Leave <em>New password</em> blank to keep the current one.</p>
+        </div>
+        <div class="search-wrap">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></svg>
+          <input type="search" id="userSearch" placeholder="Search users…" autocomplete="off" aria-label="Search users by name">
+        </div>
+      </div>
+
+      <div class="admin-card-body">
+        <div class="table-scroll">
+          <table class="user-table">
+            <thead>
+              <tr>
+                <th>User</th>
+                <th>Role</th>
+                <th>Can upload for</th>
+                <th>New password</th>
+                <th style="text-align:right;">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for u in users %}
+              <tr data-user-row data-form="perm-form-{{ u.id }}" data-username="{{ u.username | lower }}">
+                <td>
+                  <div class="user-cell">
+                    <div class="user-avatar {% if u.is_admin %}is-admin{% endif %}" aria-hidden="true">{{ u.username[:2] | upper }}</div>
+                    <div>
+                      <div class="user-name">{{ u.username }}{% if u.id == current_user.id %}<span class="you-chip">You</span>{% endif %}</div>
+                      <div class="user-sub">
+                        {%- if u.is_admin -%}Controls every page
+                        {%- elif u.controls -%}Controls {{ u.controls | length }} page{{ 's' if u.controls | length != 1 else '' }}
+                        {%- else -%}View-only access{%- endif -%}
+                      </div>
+                    </div>
+                  </div>
+                </td>
+                <td data-label="Role">
+                  <label class="switch {% if u.id == current_user.id %}is-locked{% endif %}"
+                         {% if u.id == current_user.id %}title="You can't remove your own admin access"{% endif %}>
+                    <input form="perm-form-{{ u.id }}" type="checkbox" name="is_admin" data-admin-toggle
+                           {% if u.is_admin %}checked{% endif %}
+                           {% if u.id == current_user.id %}onclick="return false;"{% endif %}>
+                    <span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span>
+                    <span class="switch-text">Admin</span>
+                  </label>
+                  {% if u.id == current_user.id %}
+                  <span class="lock-hint"><span data-oia-icon="lock" aria-hidden="true"></span> That's you</span>
+                  {% elif u.is_admin and admin_count == 1 %}
+                  <span class="lock-hint">Last admin account</span>
+                  {% endif %}
+                </td>
+                <td data-label="Can upload for">
+                  <div class="chip-grid" data-chip-grid>
+                    {% for key in PAGE_KEYS if key != 'reports' %}
+                    <label class="chip">
+                      <input form="perm-form-{{ u.id }}" type="checkbox" name="controls" value="{{ key }}" {% if key in u.controls %}checked{% endif %}>
+                      <span class="chip-body">{{ PAGE_LABELS[key] }}</span>
+                    </label>
+                    {% endfor %}
+                  </div>
+                  <p class="chip-note">Admins can already edit every page — these stay saved in case you remove admin later.</p>
+                </td>
+                <td data-label="New password">
+                  <div class="pw-field">
+                    <input form="perm-form-{{ u.id }}" type="password" name="new_password"
+                           placeholder="Unchanged" minlength="{{ security.min_password_length }}" autocomplete="new-password"
+                           aria-label="New password for {{ u.username }}">
+                    <button type="button" class="pw-toggle" data-pw-toggle aria-label="Show password">Show</button>
+                  </div>
+                </td>
+                <td data-label="Actions">
+                  <div class="row-actions">
+                    <span class="unsaved-dot" title="Unsaved changes" aria-hidden="true"></span>
+                    <button form="perm-form-{{ u.id }}" type="submit" class="admin-btn" data-save>Save</button>
+                    {% if u.id != current_user.id %}
+                    <button form="del-form-{{ u.id }}" type="submit" class="admin-btn danger">Remove</button>
+                    {% endif %}
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+              <tr class="empty-row" id="noResults" hidden>
+                <td colspan="5">No users match that search.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- One form per user, referenced from the row above via form="..." so
+             each row's checkboxes/inputs submit independently without nesting
+             a <form> across table cells (invalid HTML). -->
+        {% for u in users %}
+        <form id="perm-form-{{ u.id }}" method="POST" action="{{ url_for('admin_update_permissions', user_id=u.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"></form>
+        {% if u.id != current_user.id %}
+        <form id="del-form-{{ u.id }}" method="POST" action="{{ url_for('admin_delete_user', user_id=u.id) }}" onsubmit="return confirm({{ ('Remove ' ~ u.username ~ '? This cannot be undone.') | tojson | forceescape }});"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"></form>
+        {% endif %}
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="admin-card">
+      <div class="admin-card-head">
+        <div>
+          <h3>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9.2"/><path d="M12 8.2v7.6M8.2 12h7.6"/></svg>
+            Add a new user
+          </h3>
+          <p>New accounts can view every page straight away. Tick only the pages they should be able to change.</p>
+        </div>
+      </div>
+      <div class="admin-card-body">
+        <form method="POST" action="{{ url_for('admin_create_user') }}" class="create-form">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="field">
+            <label class="field-label" for="new-username">Username</label>
+            <input type="text" id="new-username" name="username" required autocomplete="off" placeholder="e.g. priya.sharma">
+            <span class="field-hint">Used to sign in. Not case-sensitive.</span>
+          </div>
+          <div class="field">
+            <label class="field-label" for="new-password">Password</label>
+            <div class="pw-field">
+              <input type="password" id="new-password" name="password" required minlength="{{ security.min_password_length }}" autocomplete="new-password" placeholder="At least {{ security.min_password_length }} characters">
+              <button type="button" class="pw-toggle" data-pw-toggle aria-label="Show password">Show</button>
+            </div>
+            <span class="field-hint">Minimum {{ security.min_password_length }} characters. Share it with them privately.</span>
+          </div>
+
+          <div class="field full">
+            <div class="admin-opt">
+              <label class="switch" style="margin-top:2px;">
+                <input type="checkbox" name="is_admin" data-admin-toggle>
+                <span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span>
+              </label>
+              <div class="admin-opt-text">
+                <strong>Grant full admin access</strong>
+                <p>Admins can edit every page and manage users, including creating and removing accounts.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="field full">
+            <span class="field-label">Can upload for</span>
+            <div class="chip-grid" data-chip-grid style="max-width:none;">
+              {% for key in PAGE_KEYS if key != 'reports' %}
+              <label class="chip">
+                <input type="checkbox" name="controls" value="{{ key }}">
+                <span class="chip-body">{{ PAGE_LABELS[key] }}</span>
+              </label>
+              {% endfor %}
+            </div>
+            <p class="chip-note">Admins can already edit every page — these stay saved in case you remove admin later.</p>
+          </div>
+
+          <div class="field full form-footer">
+            <span class="field-hint">They can sign in as soon as you create the account.</span>
+            <button type="submit" class="admin-btn primary">Create user</button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <section class="admin-card">
+      <div class="admin-card-head">
+        <div>
+          <h3>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="10.5" width="16" height="10.5" rx="2.6"/><path d="M8 10.5V7.4a4 4 0 0 1 8 0v3.1"/></svg>
+            Sign-in security
+          </h3>
+          <p>These rules apply to every account and are enforced by the server.</p>
+        </div>
+      </div>
+      <div class="admin-card-body">
+        <div class="policy-grid">
+          <div class="policy">
+            <span>Minimum password length</span>
+            <strong>{{ security.min_password_length }} characters</strong>
+            <small>Shorter passwords are rejected when creating or changing an account.</small>
+          </div>
+          <div class="policy">
+            <span>Failed sign-in lockout</span>
+            <strong>{{ security.max_failed_logins }} attempts</strong>
+            <small>Further tries are refused for {{ security.lockout_minutes }} minutes.</small>
+          </div>
+          <div class="policy">
+            <span>Session length</span>
+            <strong>{{ security.session_hours }} hours</strong>
+            <small>People are signed out automatically after this.</small>
+          </div>
+          <div class="policy">
+            <span>Secure cookie</span>
+            <strong>{{ 'On' if security.https_only else 'Off' }}</strong>
+            <small>{% if security.https_only %}Session cookies are sent over HTTPS only.{% else %}Set <code>OIA_HUB_HTTPS=1</code> when serving over HTTPS.{% endif %}</small>
+          </div>
+        </div>
+        <p class="policy-note">
+          Locked out of every admin account? Run <code>python auth.py reset-admin</code> in the project folder — it prints a fresh admin password.
+        </p>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  // Show / hide password fields.
+  document.querySelectorAll("[data-pw-toggle]").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var input = btn.parentElement.querySelector("input");
+      if (!input) return;
+      var reveal = input.type === "password";
+      input.type = reveal ? "text" : "password";
+      btn.textContent = reveal ? "Hide" : "Show";
+      btn.setAttribute("aria-label", reveal ? "Hide password" : "Show password");
+    });
+  });
+
+  // Ticking "Admin" makes the per-page chips redundant — dim them and explain.
+  document.querySelectorAll("[data-admin-toggle]").forEach(function (toggle) {
+    var scope = toggle.closest("tr[data-user-row]") || toggle.closest("form");
+    if (!scope) return;
+    var grid = scope.querySelector("[data-chip-grid]");
+    if (!grid) return;
+    var sync = function () { grid.classList.toggle("is-superseded", toggle.checked); };
+    toggle.addEventListener("change", sync);
+    sync();
+  });
+
+  // Flag rows with unsaved edits so Save is obviously the next step.
+  document.querySelectorAll("tr[data-user-row]").forEach(function (row) {
+    var formId = row.getAttribute("data-form");
+    var save = row.querySelector("[data-save]");
+    var markDirty = function () {
+      row.classList.add("is-dirty");
+      if (save) save.classList.add("is-active");
+    };
+    row.querySelectorAll('input[form="' + formId + '"]').forEach(function (input) {
+      input.addEventListener("change", markDirty);
+      input.addEventListener("input", markDirty);
+    });
+  });
+
+  // Warn before navigating away from unsaved row edits.
+  var submitting = false;
+  document.querySelectorAll("form[id^='perm-form-'], form[id^='del-form-']").forEach(function (f) {
+    f.addEventListener("submit", function () { submitting = true; });
+  });
+  window.addEventListener("beforeunload", function (e) {
+    if (submitting || !document.querySelector("tr.is-dirty")) return;
+    e.preventDefault();
+    e.returnValue = "";
+  });
+
+  // Client-side search over the user rows.
+  var search = document.getElementById("userSearch");
+  var noResults = document.getElementById("noResults");
+  if (search) {
+    search.addEventListener("input", function () {
+      var q = search.value.trim().toLowerCase();
+      var shown = 0;
+      document.querySelectorAll("tr[data-user-row]").forEach(function (row) {
+        var match = !q || (row.getAttribute("data-username") || "").indexOf(q) !== -1;
+        row.hidden = !match;
+        if (match) shown++;
+      });
+      if (noResults) noResults.hidden = shown !== 0;
+    });
+  }
+})();
+</script>
+  <script src="{{ url_for('static', filename='oia-icons.js') }}?v=2"></script>
+</body>
+</html>

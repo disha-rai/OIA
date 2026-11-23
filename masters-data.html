@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OIA Masters Data Management</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='masters-data.css') }}?v=3" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='campus-cards.css') }}?v=3" />
+  <script src="{{ url_for('static', filename='campus-images.js') }}?v=4" defer></script>
+  <script src="{{ url_for('static', filename='masters-data.js') }}?v=3" defer></script>
+<link rel="stylesheet" href="{{ url_for('static', filename='hub-shell.css') }}?v=4">
+  <link rel="stylesheet" href="{{ url_for('static', filename='oia-icons.css') }}?v=2">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-logo">OIA</div>
+        <div>
+          <h1>Masters Data Hub</h1>
+          <p>Office of International Affairs</p>
+        </div>
+      </div>
+      <nav class="nav-menu">
+        <a class="nav-item" href="{{ url_for('index') }}"><span data-oia-icon="landmark" aria-hidden="true"></span> Universities</a>
+        <a class="nav-item active" href="{{ url_for('masters_data') }}"><span data-oia-icon="graduation-cap" aria-hidden="true"></span> Masters Data</a>
+        <a class="nav-item" href="{{ url_for('student_exchange_page') }}"><span data-oia-icon="plane" aria-hidden="true"></span> Student Exchange</a>
+        <a class="nav-item" href="{{ url_for('internships_page') }}"><span data-oia-icon="briefcase-business" aria-hidden="true"></span> Internships</a>
+        <a class="nav-item" href="{{ url_for('reports_page') }}"><span data-oia-icon="chart-no-axes-combined" aria-hidden="true"></span> Reports</a>
+        {% if current_user.is_admin or ((current_user.controls or []) | reject('equalto','reports') | list) %}<a class="nav-item" href="{{ url_for('data_uploads_page') }}"><span data-oia-icon="upload" aria-hidden="true"></span> Data Uploads</a>{% else %}<span class="nav-item nav-item-disabled" title="You don't have permission to update data"><span data-oia-icon="upload" aria-hidden="true"></span> Data Uploads</span>{% endif %}
+        {% if current_user.is_admin %}<a class="nav-item" href="{{ url_for('admin_page') }}"><span data-oia-icon="settings" aria-hidden="true"></span> Admin</a>{% else %}<span class="nav-item nav-item-disabled"><span data-oia-icon="settings" aria-hidden="true"></span> Admin</span>{% endif %}
+      </nav>
+      <div class="sidebar-footer">
+        <strong>Data-management view</strong>
+        <p>Built to organize program pathways, discounts, rankings, links, and PU-school mapping without overwhelming OIA staff.</p>
+      </div>
+    {% include "_user_card.html" %}
+</aside>
+
+    <main class="main">
+      <header class="topbar masters-hero ci-surface">
+        <div>
+          <h2><span class="oia-hero-mark" data-oia-icon="graduation-cap" data-oia-animate="true" aria-hidden="true"></span>Master Progression/ Dual Degree</h2>
+          <p class="subtitle">Search, filter, compare, and audit partner-university masters opportunities from one structured page.</p>
+        </div>
+        <div class="top-actions">
+          <button class="secondary-btn" id="resetBtn" type="button">Reset Filters</button>
+          <button class="primary-btn" id="exportBtn" type="button">Export Current View</button>
+        </div>
+      </header>
+
+
+      <section class="kpi-grid" id="kpiGrid"></section>
+
+      <section class="insight-grid">
+        <article class="insight-card wide">
+          <div class="section-title">
+            <div><h3>Country Coverage</h3><p>Program distribution by destination country</p></div>
+          </div>
+          <div id="countryBars" class="bar-list"></div>
+        </article>
+        <article class="insight-card">
+          <div class="section-title"><div><h3>Opportunity Mix</h3><p>Direct masters vs pathway options</p></div></div>
+          <div id="opportunityDonut" class="donut-card"></div>
+        </article>
+        <article class="insight-card">
+          <div class="section-title"><div><h3>Data Health</h3><p>What OIA may need to complete</p></div></div>
+          <div id="healthList" class="health-list"></div>
+        </article>
+      </section>
+
+      <section class="control-panel">
+        <input id="searchInput" type="search" placeholder="Search university, program, city, school, scholarship..." />
+        <select id="countryFilter"><option value="all">All countries</option></select>
+        <select id="schoolFilter"><option value="all">All PU schools</option></select>
+        <select id="opportunityFilter"><option value="all">All opportunities</option></select>
+        <select id="scholarshipFilter">
+          <option value="all">Scholarship/discount: all</option>
+          <option value="yes">Only with scholarship/discount</option>
+          <option value="no">Missing scholarship/discount</option>
+        </select>
+        <select id="rankFilter">
+          <option value="all">Ranking: all</option>
+          <option value="yes">Only with ranking</option>
+          <option value="no">Missing ranking</option>
+        </select>
+        <select id="sortFilter">
+          <option value="programsDesc">Sort: most programs</option>
+          <option value="nameAsc">Sort: university A-Z</option>
+          <option value="countryAsc">Sort: country A-Z</option>
+          <option value="scholarshipDesc">Sort: scholarship coverage</option>
+        </select>
+      </section>
+
+      <section class="workspace-grid">
+        <section class="university-panel">
+          <div class="section-title sticky-title">
+            <div><h3>University Pathway Cards</h3><p id="resultText">Loading masters pathways…</p></div>
+            <div class="view-toggle">
+              <button id="cardsBtn" class="active" type="button">Cards</button>
+              <button id="tableBtn" type="button">Programs</button>
+            </div>
+          </div>
+          <div id="universityCards" class="university-grid"></div>
+          <div id="programTableWrap" class="program-table-wrap hidden">
+            <table>
+              <thead>
+                <tr><th>University</th><th>Country</th><th>PU School</th><th>Opportunity</th><th>Program</th><th>Duration</th><th>Scholarship / Discount</th><th>Links</th></tr>
+              </thead>
+              <tbody id="programRows"></tbody>
+            </table>
+          </div>
+        </section>
+        <aside class="detail-panel" id="detailPanel">
+          <div class="empty-detail">
+            <span><span data-oia-icon="graduation-cap" aria-hidden="true"></span></span>
+            <h3>Select a university</h3>
+            <p>Open a card to view its program list, PU-school coverage, links, ranking details, and missing-data notes.</p>
+          </div>
+        </aside>
+      </section>
+    </main>
+  </div>
+  <script src="{{ url_for('static', filename='oia-icons.js') }}?v=2"></script>
+  <script>
+    window.addEventListener('DOMContentLoaded', function () {
+      if (window.CampusImages) CampusImages.background(document.querySelector('.masters-hero'), 'masters', 'masters-pathways-hero', 'internship-campus.svg');
+    });
+  </script>
+</body>
+</html>

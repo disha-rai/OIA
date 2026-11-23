@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="csrf-token" content="{{ csrf_token() }}">
+<title>Data Uploads · Masters Data Hub — OIA</title>
+<style>
+  :root{
+    --navy-950:#0a0f1e;
+    --navy-900:#0d1326;
+    --navy-800:#131b32;
+    --navy-700:#1a2340;
+    --gold-500:#e3b23c;
+    --gold-400:#eec872;
+    --gold-100:#fbf1da;
+    --bg:#eef1f6;
+    --card:#ffffff;
+    --ink-900:#0f172a;
+    --ink-600:#4b5568;
+    --ink-400:#8b93a7;
+    --line:#e6e9f0;
+    --radius-lg:22px;
+    --radius-md:16px;
+    font-family:"Inter","Segoe UI",system-ui,-apple-system,sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--ink-900);-webkit-font-smoothing:antialiased;}
+  a{text-decoration:none;color:inherit;}
+
+  .app{display:grid;grid-template-columns:280px 1fr;min-height:100vh;}
+
+  .sidebar{
+    background:linear-gradient(180deg,var(--navy-950),var(--navy-900) 60%,var(--navy-950));
+    padding:28px 20px;display:flex;flex-direction:column;gap:8px;color:#dfe4ef;
+  }
+  .brand{display:flex;align-items:center;gap:12px;padding:6px 8px 26px 8px;}
+  .brand-mark{
+    width:44px;height:44px;border-radius:12px;
+    background:linear-gradient(145deg,var(--gold-400),var(--gold-500));
+    display:flex;align-items:center;justify-content:center;
+    font-weight:800;color:var(--navy-950);font-size:14px;letter-spacing:.5px;
+    box-shadow:0 6px 16px rgba(227,178,60,.35);
+  }
+  .brand-text .title{font-weight:700;font-size:16.5px;color:#fff;line-height:1.2;}
+  .brand-text .sub{font-size:12px;color:#8a93ad;margin-top:2px;}
+  .nav-item{
+    display:flex;align-items:center;gap:12px;padding:13px 16px;border-radius:12px;
+    font-size:14.5px;font-weight:600;color:#c3cadd;cursor:pointer;
+    transition:background .15s ease, color .15s ease;
+  }
+  .nav-item .ic{font-size:16px;width:20px;text-align:center;}
+  .nav-item:hover{background:var(--navy-700);color:#fff;}
+  .nav-item.active{
+    background:linear-gradient(135deg,var(--gold-400),var(--gold-500));
+    color:var(--navy-950);box-shadow:0 8px 20px rgba(227,178,60,.25);
+  }
+  .side-note{margin-top:auto;background:var(--navy-800);border:1px solid #232c4a;border-radius:16px;padding:18px;}
+  .side-note .tag{color:var(--gold-400);font-weight:700;font-size:13px;margin-bottom:8px;}
+  .side-note p{font-size:12.5px;line-height:1.55;color:#9aa2b8;margin:0;}
+
+  .main{padding:26px 34px 60px;min-width:0;}
+
+  /* ── Data Uploads page ───────────────────────────────────── */
+  .hero{
+    position:relative;overflow:hidden;border-radius:var(--radius-lg);
+    background:linear-gradient(120deg,var(--navy-950) 0%, var(--navy-800) 55%, #3a2f12 130%);
+    padding:32px 36px 28px;color:#fff;margin-bottom:22px;
+  }
+  .hero::before{
+    content:"";position:absolute;right:-80px;top:-80px;width:320px;height:320px;border-radius:50%;
+    background:radial-gradient(circle at 30% 30%, rgba(238,200,114,.35), transparent 70%);
+  }
+  .hero > *{position:relative;z-index:1;}
+  .eyebrow{
+    display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.08);
+    border:1px solid rgba(255,255,255,.14);padding:7px 14px;border-radius:999px;
+    font-size:12px;font-weight:700;letter-spacing:.06em;color:var(--gold-400);
+  }
+  .eyebrow .dot{width:7px;height:7px;border-radius:50%;background:var(--gold-500);}
+  .hero h1{font-size:34px;margin:16px 0 8px;font-weight:800;letter-spacing:-.5px;}
+  .hero p.desc{font-size:15px;color:#b7bed4;max-width:660px;margin:0 0 22px;line-height:1.55;}
+
+  .steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;}
+  .step{
+    display:flex;gap:12px;align-items:flex-start;padding:14px 16px;border-radius:14px;
+    background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);
+  }
+  .step .n{
+    flex-shrink:0;width:28px;height:28px;border-radius:9px;display:flex;align-items:center;justify-content:center;
+    font-weight:800;font-size:13px;color:var(--navy-950);background:linear-gradient(135deg,var(--gold-400),var(--gold-500));
+  }
+  .step strong{display:block;font-size:13.5px;margin-bottom:2px;}
+  .step span{font-size:12.5px;color:#b7bed4;line-height:1.45;}
+
+  .group{margin-top:26px;}
+  .group-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;flex-wrap:wrap;}
+  .group-head h2{margin:0;font-size:18px;font-weight:800;display:flex;align-items:center;gap:10px;}
+  .group-head h2 .gi{
+    width:34px;height:34px;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;
+    background:var(--card);border:1px solid var(--line);font-size:17px;
+  }
+  .group-head a{font-size:13px;font-weight:700;color:var(--ink-600);}
+  .group-head a:hover{color:var(--navy-950);text-decoration:underline;}
+
+  .slot-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px;}
+  .slot{
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius-md);
+    padding:20px;display:flex;flex-direction:column;gap:14px;position:relative;overflow:hidden;
+  }
+  .slot::before{content:"";position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,var(--navy-900),var(--gold-500));}
+  .slot-top{display:flex;gap:14px;align-items:flex-start;}
+  .xl{
+    flex-shrink:0;width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;
+    background:#1d6f42;color:#fff;font-weight:900;font-size:17px;box-shadow:0 6px 14px rgba(29,111,66,.25);
+  }
+  .slot-top h3{margin:0 0 4px;font-size:15.5px;font-weight:800;line-height:1.3;}
+  .slot-top .hint{margin:0;font-size:12.5px;color:var(--ink-600);line-height:1.45;}
+
+  .current{
+    display:grid;grid-template-columns:auto 1fr;gap:6px 12px;font-size:12.5px;
+    background:#f7f8fb;border:1px solid var(--line);border-radius:12px;padding:12px 14px;
+  }
+  .current dt{color:var(--ink-400);font-weight:600;}
+  .current dd{margin:0;color:var(--ink-900);font-weight:700;min-width:0;overflow-wrap:anywhere;}
+  .current dd.fname{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .current dd.missing{color:#b42318;}
+
+  .drop{
+    border:2px dashed #cfd5e2;border-radius:14px;padding:20px 16px;text-align:center;
+    background:#fbfcfe;cursor:pointer;transition:border-color .15s ease, background .15s ease;
+  }
+  .drop:hover,.drop:focus-visible{border-color:var(--gold-400);background:#fffbf0;outline:none;}
+  .drop.over{border-color:var(--gold-500);background:var(--gold-100);}
+  .drop .di{font-size:24px;display:block;margin-bottom:6px;}
+  .drop strong{display:block;font-size:14px;margin-bottom:3px;}
+  .drop span{font-size:12.5px;color:var(--ink-400);}
+  .drop .browse{color:#9a7418;font-weight:800;text-decoration:underline;}
+  .drop.busy{pointer-events:none;opacity:.7;}
+
+  .progress{height:6px;border-radius:999px;background:#eef0f5;overflow:hidden;display:none;}
+  .progress.show{display:block;}
+  .progress i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--navy-900),var(--gold-500));transition:width .2s ease;}
+
+  .msg{display:none;font-size:13px;line-height:1.45;padding:11px 13px;border-radius:11px;}
+  .msg.show{display:block;}
+  .msg.ok{background:#ecfdf3;color:#05603a;border:1px solid #abefc6;}
+  .msg.err{background:#fef3f2;color:#b42318;border:1px solid #fecdca;}
+
+  .slot-foot{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--ink-400);gap:8px;flex-wrap:wrap;}
+  .pill{background:#f1f3f7;color:var(--ink-600);font-weight:700;padding:4px 10px;border-radius:999px;}
+
+  /* who-can-upload bar (admins only) */
+  .access{
+    display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:-2px 0 14px;
+    padding:12px 14px;border-radius:14px;background:var(--card);border:1px solid var(--line);
+  }
+  .access .al{font-size:12px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-400);margin-right:2px;}
+  .person{
+    display:inline-flex;align-items:center;gap:7px;padding:4px 6px 4px 4px;border-radius:999px;
+    background:#f3f5f9;border:1px solid var(--line);font-size:13px;font-weight:700;color:var(--ink-900);
+  }
+  .person .pa{
+    width:24px;height:24px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;
+    font-size:10.5px;font-weight:800;color:#fff;background:#3b4a78;
+  }
+  .person.admin{background:var(--gold-100);border-color:#f0d99a;}
+  .person.admin .pa{background:linear-gradient(145deg,#eec872,#d4a52c);color:#0a0f1e;}
+  .person .tagsm{font-size:10px;font-weight:800;letter-spacing:.05em;color:#9a7418;text-transform:uppercase;padding-right:4px;}
+  .person button{
+    width:22px;height:22px;border-radius:50%;border:none;cursor:pointer;background:transparent;color:var(--ink-400);
+    font-size:15px;line-height:1;display:inline-flex;align-items:center;justify-content:center;
+  }
+  .person button:hover{background:#fee4e2;color:#b42318;}
+  .person button:focus-visible{outline:2px solid var(--gold-500);}
+  .add-person{
+    padding:6px 10px;border-radius:999px;border:1px dashed #c3cad8;background:#fff;font-size:13px;font-weight:700;
+    color:var(--ink-600);cursor:pointer;max-width:220px;
+  }
+  .add-person:hover,.add-person:focus{border-color:var(--gold-500);outline:none;}
+  .access .note{font-size:12.5px;margin-left:auto;}
+  .access .note.ok{color:#05603a;} .access .note.err{color:#b42318;}
+
+  .empty{
+    margin-top:26px;background:var(--card);border:1px solid var(--line);border-radius:var(--radius-lg);
+    padding:48px 24px;text-align:center;color:var(--ink-600);
+  }
+  .empty .big{font-size:40px;display:block;margin-bottom:10px;}
+  .empty h2{margin:0 0 6px;font-size:19px;color:var(--ink-900);}
+  .empty p{margin:0 auto;max-width:460px;font-size:14px;line-height:1.55;}
+  .skeleton{height:260px;border-radius:var(--radius-md);background:linear-gradient(90deg,#e9edf3,#f4f6f9,#e9edf3);background-size:200% 100%;animation:sk 1.2s linear infinite;}
+  @keyframes sk{to{background-position:-200% 0;}}
+  .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);}
+
+  @media (max-width:900px){
+    .app{grid-template-columns:1fr;}
+    .sidebar{display:none;}
+    .main{padding:18px 16px 40px;}
+    .steps{grid-template-columns:1fr;}
+    .slot-grid{grid-template-columns:1fr;}
+  }
+  @media (prefers-reduced-motion:reduce){.skeleton{animation:none;}}
+</style>
+<link rel="stylesheet" href="{{ url_for('static', filename='hub-shell.css') }}?v=4">
+  <link rel="stylesheet" href="{{ url_for('static', filename='oia-icons.css') }}?v=2">
+</head>
+<body>
+<div class="app">
+
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">OIA</div>
+      <div class="brand-text">
+        <div class="title">Masters Data Hub</div>
+        <div class="sub">Office of International Affairs</div>
+      </div>
+    </div>
+    <a class="nav-item" href="{{ url_for('index') }}"><span class="ic"><span data-oia-icon="landmark" aria-hidden="true"></span></span> Universities</a>
+    <a class="nav-item" href="{{ url_for('masters_data') }}"><span class="ic"><span data-oia-icon="graduation-cap" aria-hidden="true"></span></span> Masters Data</a>
+    <a class="nav-item" href="{{ url_for('student_exchange_page') }}"><span class="ic"><span data-oia-icon="plane" aria-hidden="true"></span></span> Student Exchange</a>
+    <a class="nav-item" href="{{ url_for('internships_page') }}"><span class="ic"><span data-oia-icon="briefcase-business" aria-hidden="true"></span></span> Internships</a>
+    <a class="nav-item" href="{{ url_for('reports_page') }}"><span class="ic"><span data-oia-icon="chart-no-axes-combined" aria-hidden="true"></span></span> Reports</a>
+    <a class="nav-item active" href="{{ url_for('data_uploads_page') }}"><span class="ic"><span data-oia-icon="upload" aria-hidden="true"></span></span> Data Uploads</a>
+    {% if current_user.is_admin %}<a class="nav-item" href="{{ url_for('admin_page') }}"><span class="ic"><span data-oia-icon="settings" aria-hidden="true"></span></span> Admin</a>{% else %}<div class="nav-item nav-item-disabled"><span class="ic"><span data-oia-icon="settings" aria-hidden="true"></span></span> Admin</div>{% endif %}
+    <div class="side-note">
+      <div class="tag">Safe by design</div>
+      <p>Every upload is checked before it replaces anything, and the previous version is kept as a backup.</p>
+    </div>
+    {% include "_user_card.html" %}
+</aside>
+
+  <main class="main">
+    <div class="hero">
+      <span class="eyebrow"><span class="dot"></span> DATA MANAGEMENT</span>
+      <h1>Data Uploads</h1>
+      <p class="desc">Replace the Excel workbooks behind the Hub. Each file is checked before anything changes, the previous version is saved as a backup, and every open dashboard updates within seconds.</p>
+      <div class="steps">
+        <div class="step"><span class="n">1</span><div><strong>Edit in Excel</strong><span>Update the workbook on your own computer and save it.</span></div></div>
+        <div class="step"><span class="n">2</span><div><strong>Drop it here</strong><span>Drag the file onto its card below, or click to browse.</span></div></div>
+        <div class="step"><span class="n">3</span><div><strong>Everyone sees it</strong><span>All open dashboards refresh automatically.</span></div></div>
+      </div>
+    </div>
+
+    <div id="uploadRoot" aria-live="polite">
+      <div class="slot-grid" style="margin-top:26px;"><div class="skeleton"></div><div class="skeleton"></div></div>
+    </div>
+  </main>
+</div>
+
+<script>
+(function(){
+  const root = document.getElementById("uploadRoot");
+  const PAGE_URLS = {
+    universities: "{{ url_for('index') }}",
+    masters: "{{ url_for('masters_data') }}",
+    student_exchange: "{{ url_for('student_exchange_page') }}",
+    internships: "{{ url_for('internships_page') }}",
+  };
+  const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const size = (b) => b >= 1048576 ? (b/1048576).toFixed(1) + " MB" : Math.max(1, Math.round(b/1024)) + " KB";
+  let busy = 0, ownAt = 0;
+
+  function slotCard(page, s){
+    const f = s.file;
+    const last = s.last_upload;
+    return `
+    <article class="slot" data-page="${esc(page.key)}" data-slot="${esc(s.key)}">
+      <div class="slot-top">
+        <div class="xl" aria-hidden="true">X</div>
+        <div><h3>${esc(s.label)}</h3><p class="hint">${esc(s.hint)}</p></div>
+      </div>
+      <dl class="current">
+        <dt>Current file</dt><dd class="fname ${f.exists ? "" : "missing"}" title="${esc(f.name)}">${f.exists ? esc(f.name) : "Not uploaded yet"}</dd>
+        ${f.exists ? `<dt>Last changed</dt><dd>${esc(f.modified)} · ${size(f.size)}</dd>` : ""}
+        <dt>Uploaded by</dt><dd>${last ? `${esc(last.by)} <span style="color:var(--ink-400);font-weight:600;">on ${esc(last.at.slice(0,16))}</span>` : `<span style="color:var(--ink-400);font-weight:600;">No uploads recorded yet</span>`}</dd>
+      </dl>
+      <div class="drop" tabindex="0" role="button" aria-label="Upload a new ${esc(s.label)}">
+        <span class="di" aria-hidden="true"><span data-oia-icon="download" aria-hidden="true"></span></span>
+        <strong>Drag your .xlsx here</strong>
+        <span>or <span class="browse">browse your computer</span></span>
+      </div>
+      <input class="sr-only" type="file" accept=".xlsx,.xlsm" tabindex="-1" aria-hidden="true">
+      <div class="progress" aria-hidden="true"><i></i></div>
+      <div class="msg" role="status"></div>
+      <div class="slot-foot">
+        <span><span data-oia-icon="folder-archive" aria-hidden="true"></span> ${s.backups} previous version${s.backups === 1 ? "" : "s"} saved</span>
+        <span class="pill">.xlsx · .xlsm</span>
+      </div>
+    </article>`;
+  }
+
+  function render(data){
+    if (!data.pages.length){
+      root.innerHTML = `
+        <div class="empty">
+          <span class="big" aria-hidden="true"><span data-oia-icon="lock" aria-hidden="true"></span></span>
+          <h2>You have view-only access</h2>
+          <p>You can see every page in the Hub, but updating data needs permission. Ask an admin to give you control of the pages you look after.</p>
+        </div>`;
+      return;
+    }
+    root.innerHTML = data.pages.map((p) => `
+      <section class="group">
+        <div class="group-head">
+          <h2><span class="gi" aria-hidden="true">${p.icon}</span>${esc(p.label)}</h2>
+          ${PAGE_URLS[p.key] ? `<a href="${PAGE_URLS[p.key]}">Open ${esc(p.label)} →</a>` : ""}
+        </div>
+        ${data.is_admin ? accessBar(p, data.users || []) : ""}
+        <div class="slot-grid">${p.slots.map((s) => slotCard(p, s)).join("")}</div>
+      </section>`).join("");
+    root.querySelectorAll(".slot").forEach(wire);
+  }
+
+  // Admins: who may upload for this page, with add/remove.
+  function accessBar(page, users){
+    const ups = page.uploaders || [];
+    const has = new Set(ups.map((u) => u.id));
+    const addable = users.filter((u) => !has.has(u.id));
+    const chip = (u) => u.is_admin
+      ? `<span class="person admin" title="Admins can upload for every page"><span class="pa">${esc(u.username.slice(0,2).toUpperCase())}</span>${esc(u.username)}<span class="tagsm">Admin</span></span>`
+      : `<span class="person"><span class="pa">${esc(u.username.slice(0,2).toUpperCase())}</span>${esc(u.username)}<button type="button" data-remove="${u.id}" data-name="${esc(u.username)}" aria-label="Stop ${esc(u.username)} uploading data for ${esc(page.label)}" title="Remove upload access">×</button></span>`;
+    return `
+      <div class="access" data-page="${esc(page.key)}" data-label="${esc(page.label)}">
+        <span class="al">Who can upload</span>
+        ${ups.map(chip).join("")}
+        ${addable.length ? `<select class="add-person" aria-label="Give someone upload access for ${esc(page.label)}">
+            <option value="">+ Give access…</option>
+            ${addable.map((u) => `<option value="${u.id}">${esc(u.username)}</option>`).join("")}
+          </select>` : `<span style="font-size:12.5px;color:var(--ink-400);">Everyone already has access.</span>`}
+        <span class="note" role="status"></span>
+      </div>`;
+  }
+
+  function setAccess(bar, userId, allow){
+    const note = bar.querySelector(".note");
+    const fd = new FormData();
+    fd.append("csrf_token", document.querySelector('meta[name="csrf-token"]').content);
+    fd.append("page", bar.dataset.page); fd.append("user_id", userId); fd.append("allow", allow ? "1" : "0");
+    note.className = "note"; note.textContent = "Saving…";
+    fetch("/api/data-uploads/access", { method: "POST", body: fd })
+      .then((r) => r.json().then((d) => ({ ok: r.ok, d })))
+      .then(({ ok, d }) => {
+        if (!ok) { note.className = "note err"; note.textContent = d.error || "Couldn't save that change."; return; }
+        return load().then(() => {
+          const fresh = root.querySelector(`.access[data-page="${bar.dataset.page}"] .note`);
+          if (fresh) { fresh.className = "note ok"; fresh.textContent = "✓ " + d.message; }
+        });
+      })
+      .catch(() => { note.className = "note err"; note.textContent = "Couldn't save — check your connection."; });
+  }
+
+  root.addEventListener("change", (e) => {
+    const sel = e.target.closest(".add-person");
+    if (sel && sel.value) setAccess(sel.closest(".access"), sel.value, true);
+  });
+  root.addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-remove]");
+    if (!btn) return;
+    const bar = btn.closest(".access");
+    setAccess(bar, btn.dataset.remove, false);
+  });
+
+  function load(){
+    return fetch("/api/data-uploads", {cache:"no-store"}).then((r) => r.json()).then(render)
+      .catch(() => { root.innerHTML = `<div class="empty"><span class="big"><span data-oia-icon="triangle-alert" aria-hidden="true"></span></span><h2>Couldn't load your workbooks</h2><p>Check your connection and refresh the page.</p></div>`; });
+  }
+
+  function wire(card){
+    const drop = card.querySelector(".drop"), input = card.querySelector("input[type=file]");
+    const bar = card.querySelector(".progress"), fill = bar.querySelector("i"), msg = card.querySelector(".msg");
+    const show = (kind, text) => { msg.className = "msg show " + kind; msg.textContent = text; };
+
+    function send(file){
+      if (!file) return;
+      if (!/\.(xlsx|xlsm)$/i.test(file.name)) { show("err", "Please choose an Excel workbook (.xlsx or .xlsm)."); return; }
+      const fd = new FormData(); fd.append("file", file);
+      const xhr = new XMLHttpRequest();
+      xhr.open("POST", `/api/page-data/${encodeURIComponent(card.dataset.page)}/${encodeURIComponent(card.dataset.slot)}`);
+      drop.classList.add("busy"); bar.classList.add("show"); fill.style.width = "0";
+      show("ok", `Uploading ${file.name}…`); busy++;
+      xhr.upload.onprogress = (e) => { if (e.lengthComputable) fill.style.width = Math.round(e.loaded / e.total * 90) + "%"; };
+      xhr.onload = () => {
+        busy--; fill.style.width = "100%";
+        let data = {}; try { data = JSON.parse(xhr.responseText); } catch (_) {}
+        drop.classList.remove("busy");
+        setTimeout(() => bar.classList.remove("show"), 600);
+        if (xhr.status >= 200 && xhr.status < 300){
+          ownAt = Date.now();
+          show("ok", "✓ " + (data.message || "Updated.") + " Everyone's dashboards are refreshing now.");
+          setTimeout(() => refreshCard(card), 900);
+        } else {
+          show("err", data.error || "Upload failed. Nothing was changed.");
+        }
+      };
+      xhr.onerror = () => { busy--; drop.classList.remove("busy"); bar.classList.remove("show"); show("err", "Upload failed — check your connection and try again. Nothing was changed."); };
+      xhr.send(fd);
+    }
+
+    drop.addEventListener("click", () => input.click());
+    drop.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); input.click(); } });
+    input.addEventListener("change", () => { send(input.files[0]); input.value = ""; });
+    ["dragenter","dragover"].forEach((t) => drop.addEventListener(t, (e) => { e.preventDefault(); drop.classList.add("over"); }));
+    ["dragleave","drop"].forEach((t) => drop.addEventListener(t, (e) => { e.preventDefault(); drop.classList.remove("over"); }));
+    drop.addEventListener("drop", (e) => send(e.dataTransfer.files[0]));
+  }
+
+  // Refresh just this card's "current file" details, keeping its success message.
+  function refreshCard(card){
+    fetch("/api/data-uploads", {cache:"no-store"}).then((r) => r.json()).then((data) => {
+      for (const p of data.pages) for (const s of p.slots){
+        if (p.key === card.dataset.page && s.key === card.dataset.slot){
+          const keep = card.querySelector(".msg").outerHTML;
+          const tmp = document.createElement("div"); tmp.innerHTML = slotCard(p, s);
+          const fresh = tmp.firstElementChild;
+          fresh.querySelector(".msg").outerHTML = keep;
+          card.replaceWith(fresh); wire(fresh);
+        }
+      }
+    });
+  }
+
+  // Someone else uploaded: refresh the details (unless an upload is running here).
+  if ("EventSource" in window){
+    const src = new EventSource("/api/stream");
+    let t = null;
+    src.addEventListener("update", () => { clearTimeout(t); t = setTimeout(() => { if (!busy && Date.now() - ownAt > 6000) load(); }, 1500); });
+    window.addEventListener("beforeunload", () => src.close());
+  }
+  window.addEventListener("dragover", (e) => e.preventDefault());
+  window.addEventListener("drop", (e) => e.preventDefault());
+
+  load();
+})();
+</script>
+  <script src="{{ url_for('static', filename='oia-icons.js') }}?v=2"></script>
+</body>
+</html>
